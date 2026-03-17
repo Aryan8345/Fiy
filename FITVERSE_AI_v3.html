@@ -1,0 +1,1888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>FITVERSE AI — Smart Fitness Ecosystem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+
+<!-- Firebase compat — jsdelivr CDN (reliable, works offline-first) -->
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-app-compat.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-auth-compat.min.js"></script>
+
+<!-- Three.js + Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<!-- Firebase load check -->
+<script>
+if (typeof firebase === 'undefined') {
+  document.addEventListener('DOMContentLoaded', function() {
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#050810;font-family:Rajdhani,sans-serif;padding:20px"><div style="background:#111827;border:1px solid rgba(0,255,178,0.2);border-radius:24px;padding:44px;max-width:480px;text-align:center"><div style="font-size:56px;margin-bottom:18px">⚠️</div><h2 style="color:#00FFB2;font-family:monospace;font-size:20px;margin-bottom:14px">FIREBASE CDN BLOCKED</h2><p style="color:#8892B0;font-size:15px;line-height:1.7;margin-bottom:22px">Firebase scripts are being blocked.<br><br><strong style="color:#E8EAFF">To fix this:</strong><br>1. Disable browser extensions / ad blocker<br>2. Try opening in <strong style="color:#00FFB2">Chrome or Edge</strong><br>3. Use <strong style="color:#00FFB2">VS Code Live Server</strong> extension<br>4. Make sure you have internet connection</p><button onclick="location.reload()" style="background:linear-gradient(135deg,#00FFB2,#7B61FF);color:#000;border:none;padding:13px 30px;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:1px">🔄 RETRY</button></div></div>';
+  });
+}
+</script>
+
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --neon:#00FFB2;--neon2:#7B61FF;--neon3:#FF6B35;
+  --dark:#050810;--dark2:#0A0F1E;--dark3:#0F1729;
+  --card:#111827;--card2:#1A2235;
+  --text:#E8EAFF;--text2:#8892B0;--text3:#4A5568;
+  --grad:linear-gradient(135deg,#00FFB2,#7B61FF);
+  --grad2:linear-gradient(135deg,#7B61FF,#FF6B35);
+  --border:rgba(255,255,255,0.07);--bglow:rgba(0,255,178,0.22);
+}
+html{scroll-behavior:smooth;}
+body{background:var(--dark);color:var(--text);font-family:'Rajdhani',sans-serif;overflow-x:hidden;}
+#bg-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:0.25;}
+
+/* ════════════════════════════════
+   AUTH SCREEN
+════════════════════════════════ */
+#auth-screen{
+  position:fixed;inset:0;z-index:9000;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--dark);padding:20px;overflow-y:auto;
+}
+.auth-card{
+  width:100%;max-width:460px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:28px;padding:44px 40px;
+  position:relative;overflow:hidden;
+  animation:cardIn .55s cubic-bezier(.23,1,.32,1) both;
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(30px) scale(.97)}to{opacity:1;transform:none}}
+.auth-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--grad);}
+.auth-logo{font-family:'Orbitron',monospace;font-size:26px;font-weight:900;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;letter-spacing:2px;margin-bottom:4px;}
+.auth-sub{color:var(--text2);font-size:14px;text-align:center;margin-bottom:30px;}
+.auth-tabs{display:flex;background:var(--dark3);border-radius:12px;padding:4px;margin-bottom:24px;gap:4px;}
+.atab{flex:1;padding:9px;border:none;background:none;color:var(--text2);font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;border-radius:9px;cursor:pointer;transition:all .2s;}
+.atab.active{background:var(--card2);color:var(--neon);}
+.apanel{display:none;}
+.apanel.active{display:block;}
+
+/* Social */
+.sbtn{display:flex;align-items:center;justify-content:center;gap:11px;width:100%;padding:13px 18px;border-radius:13px;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);margin-bottom:10px;}
+.sbtn:hover{background:rgba(255,255,255,0.09);border-color:rgba(255,255,255,0.18);transform:translateY(-1px);}
+.g-logo{width:20px;height:20px;flex-shrink:0;}
+
+/* Divider */
+.dvdr{display:flex;align-items:center;gap:12px;margin:16px 0;}
+.dvdr::before,.dvdr::after{content:'';flex:1;height:1px;background:var(--border);}
+.dvdr span{color:var(--text3);font-size:12px;white-space:nowrap;}
+
+/* Form */
+.fg{margin-bottom:14px;}
+.fl{display:block;color:var(--text2);font-size:11px;font-weight:700;letter-spacing:1.5px;margin-bottom:6px;}
+.fi{width:100%;background:var(--dark3);border:1px solid var(--border);border-radius:11px;padding:12px 15px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;outline:none;transition:border-color .2s;}
+.fi:focus{border-color:rgba(0,255,178,.45);}
+.fi::placeholder{color:var(--text3);}
+select.fi{cursor:pointer;}
+.ph-row{display:grid;grid-template-columns:78px 1fr;gap:8px;}
+.aerr{color:#ef4444;font-size:13px;margin-top:8px;text-align:center;min-height:17px;line-height:1.4;}
+.aok{color:var(--neon);font-size:13px;margin-top:8px;text-align:center;}
+.abtn{width:100%;background:var(--grad);color:#000;font-family:'Orbitron',monospace;font-size:13px;font-weight:700;letter-spacing:1px;padding:14px;border-radius:13px;border:none;cursor:pointer;margin-top:8px;transition:all .3s;}
+.abtn:hover{box-shadow:0 8px 28px rgba(0,255,178,.4);transform:translateY(-1px);}
+.abtn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
+.abtn.v2{background:var(--grad2);}
+.terms{color:var(--text3);font-size:11px;text-align:center;margin-top:14px;line-height:1.5;}
+.terms a{color:var(--neon2);text-decoration:none;}
+#recaptcha-container{margin:10px 0;}
+
+/* OTP digits */
+.otp-row{display:flex;gap:8px;justify-content:center;margin:14px 0;}
+.od{width:44px;height:50px;text-align:center;background:var(--dark3);border:1px solid var(--border);border-radius:11px;color:var(--text);font-family:'Orbitron',monospace;font-size:20px;font-weight:700;outline:none;transition:border-color .2s;}
+.od:focus{border-color:rgba(0,255,178,.5);}
+
+/* ════════════════════════════════
+   ONBOARDING
+════════════════════════════════ */
+#onboard-screen{
+  position:fixed;inset:0;z-index:8500;display:none;
+  background:var(--dark);align-items:center;justify-content:center;
+  padding:20px;overflow-y:auto;
+}
+#onboard-screen.active{display:flex;}
+.ob-card{width:100%;max-width:520px;background:var(--card);border:1px solid var(--border);border-radius:28px;padding:44px 40px;animation:cardIn .5s cubic-bezier(.23,1,.32,1) both;}
+.ob-step{display:none;}
+.ob-step.active{display:block;}
+.ob-dots{display:flex;gap:6px;margin-bottom:26px;justify-content:center;}
+.ob-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s;}
+.ob-dot.active{background:var(--neon);width:22px;border-radius:3px;}
+.ob-title{font-family:'Orbitron',monospace;font-size:20px;font-weight:900;margin-bottom:8px;}
+.ob-sub{color:var(--text2);font-size:14px;margin-bottom:26px;line-height:1.6;}
+.goal-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:8px;}
+.gopt{background:var(--dark3);border:2px solid var(--border);border-radius:13px;padding:18px 14px;text-align:center;cursor:pointer;transition:all .2s;}
+.gopt:hover,.gopt.sel{border-color:var(--neon);background:rgba(0,255,178,.06);}
+.gopt .gi{font-size:30px;margin-bottom:7px;}
+.gopt .gn{font-size:13px;font-weight:600;}
+.ob-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.ob-g{display:flex;flex-direction:column;gap:6px;}
+.ob-l{color:var(--text2);font-size:11px;font-weight:700;letter-spacing:1.5px;}
+.health-row{display:flex;align-items:center;gap:14px;background:rgba(0,255,178,.04);border:1px solid rgba(0,255,178,.18);border-radius:13px;padding:16px 18px;cursor:pointer;transition:all .3s;margin-bottom:10px;width:100%;}
+.health-row:hover{background:rgba(0,255,178,.1);border-color:rgba(0,255,178,.4);}
+.hr-icon{font-size:28px;flex-shrink:0;}
+.hr-info{flex:1;}
+.hr-title{font-size:15px;font-weight:700;}
+.hr-desc{color:var(--text2);font-size:12px;margin-top:2px;}
+.hr-badge{background:rgba(0,255,178,.15);color:var(--neon);font-size:11px;font-weight:700;padding:4px 11px;border-radius:9px;white-space:nowrap;display:none;}
+.ob-next{width:100%;background:var(--grad);color:#000;font-family:'Orbitron',monospace;font-size:13px;font-weight:700;letter-spacing:1px;padding:14px;border-radius:13px;border:none;cursor:pointer;margin-top:16px;transition:all .3s;}
+.ob-next:hover{box-shadow:0 8px 28px rgba(0,255,178,.4);}
+
+/* ════════════════════════════════
+   MAIN APP
+════════════════════════════════ */
+#app{display:none;position:relative;z-index:1;}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:500;display:flex;align-items:center;padding:0 32px;height:64px;background:rgba(5,8,16,0.93);backdrop-filter:blur(22px);border-bottom:1px solid var(--border);}
+.nav-logo{font-family:'Orbitron',monospace;font-size:20px;font-weight:900;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:2px;margin-right:28px;white-space:nowrap;}
+.nav-links{display:flex;align-items:center;gap:2px;flex:1;}
+.nl{background:none;border:none;cursor:pointer;color:var(--text2);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;letter-spacing:1px;padding:8px 15px;border-radius:8px;transition:all .2s;white-space:nowrap;}
+.nl:hover,.nl.active{color:var(--neon);background:rgba(0,255,178,.07);}
+.nav-right{display:flex;align-items:center;gap:10px;margin-left:auto;}
+.nav-user{display:flex;align-items:center;gap:9px;background:var(--card2);border:1px solid var(--border);border-radius:25px;padding:5px 13px 5px 6px;cursor:pointer;transition:all .2s;}
+.nav-user:hover{border-color:var(--bglow);}
+.nav-av{width:30px;height:30px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;overflow:hidden;}
+.nav-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.nav-uname{font-size:13px;font-weight:600;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nav-out{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#ef4444;font-size:13px;font-weight:600;font-family:'Rajdhani',sans-serif;padding:7px 15px;border-radius:9px;cursor:pointer;transition:all .2s;}
+.nav-out:hover{background:rgba(239,68,68,.2);}
+.hamburger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:4px;}
+.hamburger span{width:22px;height:2px;background:var(--neon);border-radius:2px;display:block;}
+.mob-menu{display:none;position:fixed;top:64px;left:0;right:0;background:rgba(5,8,16,.97);border-bottom:1px solid var(--border);z-index:499;padding:10px;flex-direction:column;gap:3px;}
+.mob-menu.open{display:flex;}
+.mb{background:none;border:none;color:var(--text2);font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:600;padding:12px 15px;border-radius:9px;cursor:pointer;text-align:left;transition:all .2s;}
+.mb:hover,.mb.active{background:rgba(0,255,178,.08);color:var(--neon);}
+
+/* PAGES */
+.page{display:none;}
+.page.active{display:block;}
+
+/* ════════ HOME ════════ */
+.hero{min-height:calc(100vh - 64px);display:flex;align-items:center;justify-content:center;text-align:center;padding:60px 20px;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 50% at 50% 40%,rgba(0,255,178,.07) 0%,transparent 70%);}
+.hero-inner{position:relative;z-index:1;}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(0,255,178,.08);border:1px solid rgba(0,255,178,.25);color:var(--neon);font-size:11px;font-weight:700;letter-spacing:3px;padding:8px 22px;border-radius:30px;margin-bottom:30px;}
+.hbdot{width:6px;height:6px;background:var(--neon);border-radius:50%;animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.hero-h1{font-family:'Orbitron',monospace;font-size:clamp(40px,7vw,86px);font-weight:900;line-height:1.05;margin-bottom:22px;}
+.hero-h1 span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hero-p{color:var(--text2);font-size:17px;max-width:560px;margin:0 auto 44px;line-height:1.7;}
+.hero-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.btn-p{background:var(--grad);color:#000;font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:1.5px;padding:14px 32px;border-radius:13px;border:none;cursor:pointer;transition:all .3s;}
+.btn-p:hover{transform:translateY(-3px);box-shadow:0 12px 38px rgba(0,255,178,.4);}
+.btn-o{background:transparent;color:var(--neon);font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:1.5px;padding:14px 32px;border-radius:13px;border:1px solid rgba(0,255,178,.35);cursor:pointer;transition:all .3s;}
+.btn-o:hover{background:rgba(0,255,178,.08);}
+.stats-bar{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:rgba(5,8,16,.6);}
+.sbi{text-align:center;padding:26px 14px;border-right:1px solid var(--border);}
+.sbi:last-child{border-right:none;}
+.sbi-val{font-family:'Orbitron',monospace;font-size:26px;font-weight:900;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.sbi-lbl{color:var(--text3);font-size:11px;letter-spacing:2px;margin-top:5px;}
+.feats-sec{padding:90px 56px;}
+.sec-tag{display:inline-block;background:rgba(123,97,255,.1);border:1px solid rgba(123,97,255,.3);color:var(--neon2);font-size:11px;font-weight:700;letter-spacing:3px;padding:5px 16px;border-radius:18px;margin-bottom:14px;}
+.sec-h{font-family:'Orbitron',monospace;font-size:clamp(26px,4vw,44px);font-weight:900;margin-bottom:14px;}
+.sec-h span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.sec-p{color:var(--text2);font-size:15px;max-width:480px;margin:0 auto 50px;line-height:1.6;}
+.feats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+.fc{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:32px 28px;cursor:pointer;transition:all .35s cubic-bezier(.23,1,.32,1);position:relative;overflow:hidden;}
+.fc:hover{transform:translateY(-6px);border-color:var(--bglow);box-shadow:0 18px 50px rgba(0,0,0,.5);}
+.fc-num{font-family:'Orbitron',monospace;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:2px;margin-bottom:16px;}
+.fc-icon{width:50px;height:50px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:18px;}
+.fc-name{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;letter-spacing:1px;margin-bottom:9px;}
+.fc-desc{color:var(--text2);font-size:14px;line-height:1.7;}
+
+/* ════════ DASHBOARD ════════ */
+.dash-wrap{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 64px);}
+.sidebar{background:var(--dark2);border-right:1px solid var(--border);padding:26px 14px;position:sticky;top:64px;height:calc(100vh - 64px);overflow-y:auto;}
+.sidebar::-webkit-scrollbar{width:3px;}
+.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px;}
+.sb-lbl{font-size:10px;font-weight:700;letter-spacing:2.5px;color:var(--text3);padding:7px 10px 3px;margin-top:7px;}
+.sb-item{display:flex;align-items:center;gap:10px;padding:10px 13px;border-radius:10px;color:var(--text2);font-size:14px;font-weight:500;cursor:pointer;transition:all .18s;border:1px solid transparent;background:none;width:100%;text-align:left;}
+.sb-item:hover,.sb-item.active{background:rgba(0,255,178,.07);color:var(--neon);border-color:rgba(0,255,178,.1);}
+.sb-ic{font-size:16px;width:20px;text-align:center;}
+.sb-badge{margin-left:auto;background:rgba(0,255,178,.15);color:var(--neon);font-size:10px;font-weight:700;padding:2px 8px;border-radius:7px;}
+.dash-body{padding:34px;overflow-y:auto;}
+.dash-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:26px;flex-wrap:wrap;gap:12px;}
+.dt-greet-lbl{color:var(--text2);font-size:13px;}
+.dt-greet-name{font-family:'Orbitron',monospace;font-size:21px;font-weight:700;margin-top:4px;}
+.dt-greet-name span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.dt-actions{display:flex;gap:9px;flex-wrap:wrap;}
+.dt-btn{display:flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--border);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;transition:all .2s;}
+.dt-btn:hover{border-color:var(--bglow);color:var(--neon);}
+
+/* Step counter banner */
+.step-banner{background:linear-gradient(135deg,rgba(0,255,178,.08),rgba(123,97,255,.08));border:1px solid rgba(0,255,178,.2);border-radius:16px;padding:18px 22px;margin-bottom:22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.stb-icon{font-size:26px;}
+.stb-info{flex:1;}
+.stb-title{font-size:15px;font-weight:700;margin-bottom:2px;}
+.stb-sub{color:var(--text2);font-size:12px;}
+.stb-count{font-family:'Orbitron',monospace;font-size:28px;font-weight:900;color:var(--neon);white-space:nowrap;}
+.stb-sync{background:var(--grad);color:#000;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;padding:9px 18px;border-radius:9px;border:none;cursor:pointer;white-space:nowrap;transition:all .3s;}
+.stb-sync:hover{box-shadow:0 4px 18px rgba(0,255,178,.4);}
+
+/* Metrics */
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
+.mc{background:var(--card);border:1px solid var(--border);border-radius:17px;padding:20px;position:relative;overflow:hidden;transition:all .3s;cursor:pointer;}
+.mc:hover{transform:translateY(-3px);border-color:var(--bglow);}
+.mc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.mc-g::before{background:var(--neon);}
+.mc-p::before{background:var(--neon2);}
+.mc-o::before{background:var(--neon3);}
+.mc-pk::before{background:#FF1493;}
+.mc-icon{font-size:22px;margin-bottom:12px;}
+.mc-lbl{color:var(--text2);font-size:11px;letter-spacing:1.5px;font-weight:700;margin-bottom:6px;}
+.mc-val{font-family:'Orbitron',monospace;font-size:28px;font-weight:900;line-height:1;}
+.mc-val.g{color:var(--neon);}
+.mc-val.p{color:var(--neon2);}
+.mc-val.o{color:var(--neon3);}
+.mc-val.pk{color:#FF1493;}
+.mc-unit{font-size:13px;font-family:'Rajdhani',sans-serif;color:var(--text2);}
+.mc-sub{color:var(--text2);font-size:11px;margin-top:6px;}
+.pbar{height:3px;background:rgba(255,255,255,.05);border-radius:3px;margin-top:9px;overflow:hidden;}
+.pfill{height:100%;border-radius:3px;transition:width 1.6s cubic-bezier(.23,1,.32,1);}
+.pf-g{background:var(--neon);}
+.pf-p{background:var(--neon2);}
+.pf-o{background:var(--neon3);}
+.pf-pk{background:#FF1493;}
+
+/* Globe */
+.globe-card{background:var(--card);border:1px solid var(--border);border-radius:17px;overflow:hidden;margin-bottom:18px;position:relative;}
+#dash-canvas{width:100%;height:250px;display:block;}
+.globe-ov{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(17,24,39,.95));padding:16px 22px;display:flex;justify-content:space-between;align-items:flex-end;}
+.go-lbl{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:var(--neon);letter-spacing:2px;}
+.go-steps{font-family:'Orbitron',monospace;font-size:22px;font-weight:900;}
+
+/* Charts */
+.charts-row{display:grid;grid-template-columns:3fr 2fr;gap:16px;margin-bottom:18px;}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:17px;padding:22px;}
+.cc-title{font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:4px;}
+.cc-sub{color:var(--text2);font-size:12px;margin-bottom:18px;}
+.rings-flex{display:flex;align-items:center;gap:18px;}
+.ring-leg{display:flex;flex-direction:column;gap:11px;}
+.rl-item{display:flex;align-items:center;gap:8px;}
+.rl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.rl-name{font-size:13px;font-weight:600;}
+.rl-pct{font-family:'Orbitron',monospace;font-size:12px;}
+
+/* Food log */
+.food-log-card{background:var(--card);border:1px solid var(--border);border-radius:17px;padding:22px;margin-bottom:18px;}
+.fl-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.fl-title{font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:1px;}
+.fl-add{background:rgba(0,255,178,.1);border:1px solid rgba(0,255,178,.2);color:var(--neon);font-size:12px;font-weight:700;letter-spacing:1px;padding:6px 13px;border-radius:8px;cursor:pointer;font-family:'Rajdhani',sans-serif;transition:all .2s;}
+.fl-add:hover{background:rgba(0,255,178,.18);}
+.fl-entry{display:flex;align-items:center;gap:13px;padding:11px 13px;border-radius:10px;background:var(--dark3);margin-bottom:8px;transition:background .2s;cursor:pointer;}
+.fl-entry:hover{background:rgba(0,255,178,.04);}
+.fl-entry:last-child{margin-bottom:0;}
+.fl-em{font-size:24px;width:36px;text-align:center;}
+.fl-name{font-size:14px;font-weight:600;}
+.fl-meta{color:var(--text2);font-size:12px;margin-top:2px;}
+.fl-cal{margin-left:auto;font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:var(--neon);}
+
+/* ════════ AI COACH ════════ */
+.ai-wrap{display:grid;grid-template-columns:290px 1fr;min-height:calc(100vh - 64px);}
+.ai-sidebar{background:var(--dark2);border-right:1px solid var(--border);padding:24px 18px;display:flex;flex-direction:column;gap:14px;position:sticky;top:64px;height:calc(100vh - 64px);overflow-y:auto;}
+.ai-prof{background:var(--card);border:1px solid var(--border);border-radius:17px;padding:22px;text-align:center;}
+.ai-av-wrap{position:relative;display:inline-block;margin-bottom:13px;}
+.ai-big-av{width:68px;height:68px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto;}
+.ai-dot{position:absolute;bottom:2px;right:2px;width:14px;height:14px;background:var(--neon);border-radius:50%;border:2px solid var(--card);animation:blink 2s infinite;}
+.ai-name{font-family:'Orbitron',monospace;font-size:14px;font-weight:700;margin-bottom:4px;}
+.ai-role{color:var(--text2);font-size:12px;margin-bottom:13px;line-height:1.5;}
+.ai-mini-stats{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.ams-item{background:var(--dark3);border-radius:9px;padding:9px 7px;text-align:center;}
+.ams-val{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--neon);}
+.ams-lbl{color:var(--text2);font-size:10px;margin-top:2px;}
+.qp-card{background:var(--card);border:1px solid var(--border);border-radius:17px;padding:16px;}
+.qp-hd{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--text2);margin-bottom:11px;}
+.qp-btn{display:block;width:100%;text-align:left;background:var(--dark3);border:1px solid var(--border);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:500;padding:9px 12px;border-radius:9px;cursor:pointer;transition:all .18s;margin-bottom:7px;}
+.qp-btn:last-child{margin-bottom:0;}
+.qp-btn:hover{border-color:var(--bglow);color:var(--neon);}
+.ai-chat-main{display:flex;flex-direction:column;height:calc(100vh - 64px);}
+.chat-topbar{padding:16px 26px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:13px;background:var(--dark3);flex-shrink:0;}
+.ct-av{width:38px;height:38px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.ct-name{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;}
+.ct-status{color:var(--neon);font-size:12px;display:flex;align-items:center;gap:5px;margin-top:3px;}
+.ct-dot{width:5px;height:5px;background:var(--neon);border-radius:50%;animation:blink 2s infinite;}
+.ct-clear{margin-left:auto;background:var(--card);border:1px solid var(--border);color:var(--text2);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:14px;transition:all .2s;}
+.ct-clear:hover{color:var(--neon);border-color:var(--bglow);}
+.chat-msgs{flex:1;overflow-y:auto;padding:22px;display:flex;flex-direction:column;gap:14px;}
+.chat-msgs::-webkit-scrollbar{width:3px;}
+.chat-msgs::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:3px;}
+.mw{display:flex;gap:10px;max-width:78%;}
+.mw.user{flex-direction:row-reverse;margin-left:auto;}
+.m-av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.m-av.aav{background:var(--grad);}
+.m-av.uav{background:var(--neon2);}
+.m-bub{padding:12px 16px;border-radius:15px;font-size:14px;line-height:1.65;}
+.m-bub.ai{background:var(--dark3);border:1px solid var(--border);border-top-left-radius:4px;}
+.m-bub.user{background:var(--grad);color:#000;font-weight:600;border-top-right-radius:4px;}
+.m-time{font-size:10px;color:var(--text3);margin-top:4px;}
+.mw.user .m-time{text-align:right;}
+.typing-row{display:flex;gap:4px;padding:3px 2px;}
+.td{width:6px;height:6px;background:var(--neon);border-radius:50%;animation:tdB 1.4s infinite;}
+.td:nth-child(2){animation-delay:.2s;}
+.td:nth-child(3){animation-delay:.4s;}
+@keyframes tdB{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-7px)}}
+.chat-bottom{padding:16px 22px;border-top:1px solid var(--border);display:flex;gap:11px;align-items:flex-end;background:var(--dark3);flex-shrink:0;}
+.chat-ta{flex:1;background:var(--card);border:1px solid var(--border);border-radius:13px;padding:12px 16px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;outline:none;resize:none;min-height:46px;max-height:130px;transition:border-color .2s;}
+.chat-ta:focus{border-color:rgba(0,255,178,.4);}
+.chat-ta::placeholder{color:var(--text3);}
+.chat-send{background:var(--grad);color:#000;border:none;width:46px;height:46px;border-radius:13px;cursor:pointer;font-size:18px;transition:all .3s;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.chat-send:hover{box-shadow:0 6px 22px rgba(0,255,178,.4);transform:translateY(-2px);}
+.chat-send:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
+
+/* ════════ NUTRITION ════════ */
+.nut-wrap{padding:34px;display:grid;grid-template-columns:1fr 290px;gap:22px;}
+.scanner-box{background:var(--card);border:2px dashed rgba(0,255,178,.2);border-radius:17px;padding:32px;text-align:center;cursor:pointer;transition:all .3s;margin-bottom:16px;}
+.scanner-box:hover{border-color:rgba(0,255,178,.45);background:rgba(0,255,178,.02);}
+.sc-emoji{font-size:52px;display:block;margin-bottom:10px;}
+.sc-title{font-family:'Orbitron',monospace;font-size:14px;font-weight:700;margin-bottom:5px;}
+.sc-desc{color:var(--text2);font-size:13px;}
+.search-row{display:flex;gap:9px;margin-bottom:18px;}
+.sf{flex:1;background:var(--card);border:1px solid var(--border);border-radius:11px;padding:12px 16px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;outline:none;transition:border-color .2s;}
+.sf:focus{border-color:rgba(0,255,178,.4);}
+.sf::placeholder{color:var(--text3);}
+.ai-search-btn{background:var(--grad);color:#000;border:none;padding:0 20px;border-radius:11px;cursor:pointer;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:1px;transition:all .3s;white-space:nowrap;}
+.ai-search-btn:hover{box-shadow:0 4px 16px rgba(0,255,178,.4);}
+.cat-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+.cat-btn{background:var(--card);border:1px solid var(--border);color:var(--text2);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;padding:7px 17px;border-radius:20px;cursor:pointer;transition:all .18s;}
+.cat-btn:hover,.cat-btn.active{background:rgba(0,255,178,.1);border-color:rgba(0,255,178,.3);color:var(--neon);}
+.foods-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:11px;}
+.food-tile{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:16px 13px;text-align:center;cursor:pointer;transition:all .28s;}
+.food-tile:hover{transform:translateY(-3px);border-color:var(--bglow);}
+.ft-em{font-size:34px;margin-bottom:7px;}
+.ft-name{font-size:13px;font-weight:600;margin-bottom:5px;}
+.ft-cal{font-family:'Orbitron',monospace;font-size:15px;font-weight:900;color:var(--neon);}
+.ft-per{color:var(--text2);font-size:11px;margin-top:2px;}
+.nut-right{}
+.nc{background:var(--card);border:1px solid var(--border);border-radius:17px;padding:20px;margin-bottom:13px;}
+.nc-title{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:16px;}
+.cal-big{font-family:'Orbitron',monospace;font-size:40px;font-weight:900;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.cal-of{color:var(--text2);font-size:12px;margin-bottom:12px;}
+.macro-row{margin-bottom:12px;}
+.mr-top{display:flex;justify-content:space-between;margin-bottom:5px;}
+.mr-name{font-size:13px;font-weight:600;}
+.mr-val{font-size:12px;color:var(--text2);}
+.mr-bar{height:5px;background:rgba(255,255,255,.05);border-radius:5px;overflow:hidden;}
+.mr-fill{height:100%;border-radius:5px;}
+
+/* ════════ WORKOUT ════════ */
+.wkt-wrap{padding:34px;}
+.wkt-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:26px;flex-wrap:wrap;gap:12px;}
+.wkt-title{font-family:'Orbitron',monospace;font-size:24px;font-weight:900;}
+.wkt-filters{display:flex;gap:8px;flex-wrap:wrap;}
+.wf{background:var(--card);border:1px solid var(--border);color:var(--text2);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;letter-spacing:1px;padding:8px 19px;border-radius:22px;cursor:pointer;transition:all .18s;}
+.wf:hover,.wf.active{background:rgba(0,255,178,.1);border-color:rgba(0,255,178,.3);color:var(--neon);}
+.wkt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:17px;}
+.wkt-card{background:var(--card);border:1px solid var(--border);border-radius:17px;overflow:hidden;cursor:pointer;transition:all .35s cubic-bezier(.23,1,.32,1);}
+.wkt-card:hover{transform:translateY(-5px);border-color:var(--bglow);box-shadow:0 14px 42px rgba(0,0,0,.5);}
+.wkt-banner{height:110px;display:flex;align-items:center;justify-content:center;font-size:46px;position:relative;}
+.wkt-diff{position:absolute;top:11px;right:11px;font-size:10px;font-weight:700;letter-spacing:1.5px;padding:4px 10px;border-radius:17px;font-family:'Orbitron',monospace;}
+.d-easy{background:rgba(0,255,178,.15);color:var(--neon);}
+.d-med{background:rgba(123,97,255,.15);color:var(--neon2);}
+.d-hard{background:rgba(255,107,53,.15);color:var(--neon3);}
+.wkt-body{padding:20px;}
+.wkt-name{font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:8px;}
+.wkt-meta{display:flex;gap:14px;color:var(--text2);font-size:12px;margin-bottom:12px;}
+.wkt-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.wkt-tag{background:rgba(255,255,255,.05);color:var(--text2);font-size:11px;padding:3px 10px;border-radius:17px;}
+.wkt-start{width:100%;background:var(--grad);color:#000;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:1px;padding:10px;border-radius:10px;border:none;cursor:pointer;transition:all .3s;}
+.wkt-start:hover{box-shadow:0 5px 17px rgba(0,255,178,.4);}
+
+/* ════════ BMI ════════ */
+.bmi-wrap{padding:34px;max-width:960px;margin:0 auto;}
+.bmi-title{font-family:'Orbitron',monospace;font-size:24px;font-weight:900;margin-bottom:5px;}
+.bmi-sub{color:var(--text2);margin-bottom:32px;}
+.bmi-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;}
+.bmi-form{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:34px;}
+.bf-title{font-family:'Orbitron',monospace;font-size:15px;font-weight:700;margin-bottom:26px;}
+.bf-row{display:grid;grid-template-columns:1fr 1fr;gap:13px;}
+.bf-g{margin-bottom:14px;}
+.bf-l{display:block;color:var(--text2);font-size:11px;font-weight:700;letter-spacing:1.5px;margin-bottom:6px;}
+.bf-i,.bf-s{width:100%;background:var(--dark3);border:1px solid var(--border);border-radius:11px;padding:11px 14px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;outline:none;transition:border-color .2s;}
+.bf-i:focus,.bf-s:focus{border-color:rgba(0,255,178,.4);}
+.calc-btn{width:100%;background:var(--grad);color:#000;font-family:'Orbitron',monospace;font-size:13px;font-weight:700;letter-spacing:1.5px;padding:14px;border-radius:12px;border:none;cursor:pointer;margin-top:6px;transition:all .3s;}
+.calc-btn:hover{box-shadow:0 7px 26px rgba(0,255,178,.4);transform:translateY(-2px);}
+.bmi-result{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:34px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+#bmi-placeholder{text-align:center;color:var(--text2);}
+.bmi-ph-icon{font-size:62px;margin-bottom:18px;opacity:.4;}
+#bmi-inner{display:none;text-align:center;width:100%;}
+.bmi-big{font-family:'Orbitron',monospace;font-size:84px;font-weight:900;line-height:1;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.bmi-cat{font-size:19px;font-weight:700;margin:7px 0 22px;}
+.bmi-gauge{width:100%;margin-bottom:18px;}
+.bmi-gauge-bar{height:10px;border-radius:10px;background:linear-gradient(90deg,#3b82f6 0%,#22c55e 35%,#f59e0b 65%,#ef4444 100%);position:relative;}
+.bmi-needle{position:absolute;top:-4px;width:18px;height:18px;background:#fff;border-radius:50%;transform:translateX(-50%);box-shadow:0 2px 8px rgba(0,0,0,.5);transition:left 1.2s cubic-bezier(.23,1,.32,1);}
+.bmi-gauge-lbls{display:flex;justify-content:space-between;margin-top:6px;color:var(--text3);font-size:10px;}
+.bmi-advice{color:var(--text2);font-size:14px;line-height:1.7;text-align:center;margin-bottom:20px;}
+.bmi-ai-btn{background:rgba(123,97,255,.15);border:1px solid rgba(123,97,255,.3);color:var(--neon2);font-family:'Orbitron',monospace;font-size:12px;font-weight:700;padding:11px 24px;border-radius:11px;cursor:pointer;transition:all .2s;}
+.bmi-ai-btn:hover{background:rgba(123,97,255,.25);}
+
+/* ════════ PROFILE ════════ */
+.profile-wrap{padding:34px;}
+.profile-hero{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:34px;margin-bottom:20px;display:flex;align-items:center;gap:26px;position:relative;overflow:hidden;}
+.profile-hero::after{content:'';position:absolute;right:0;top:0;bottom:0;width:260px;background:radial-gradient(ellipse at right,rgba(0,255,178,.06) 0%,transparent 70%);}
+.ph-av{width:88px;height:88px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:38px;border:3px solid rgba(0,255,178,.3);flex-shrink:0;overflow:hidden;}
+.ph-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.ph-name{font-family:'Orbitron',monospace;font-size:22px;font-weight:900;margin-bottom:4px;}
+.ph-email{color:var(--text2);font-size:13px;margin-bottom:12px;}
+.ph-badges{display:flex;gap:9px;flex-wrap:wrap;}
+.ph-badge{font-size:12px;font-weight:700;padding:5px 13px;border-radius:17px;}
+.phb-g{background:rgba(0,255,178,.12);color:var(--neon);border:1px solid rgba(0,255,178,.2);}
+.phb-p{background:rgba(123,97,255,.12);color:var(--neon2);border:1px solid rgba(123,97,255,.2);}
+.phb-o{background:rgba(255,107,53,.12);color:var(--neon3);border:1px solid rgba(255,107,53,.2);}
+.profile-cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:17px;}
+.pcol{background:var(--card);border:1px solid var(--border);border-radius:17px;padding:22px;}
+.pcol-head{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--text2);margin-bottom:16px;}
+.s-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.s-row:last-child{border-bottom:none;}
+.s-lbl{font-size:14px;font-weight:500;}
+.tog{position:relative;width:42px;height:23px;cursor:pointer;}
+.tog input{opacity:0;width:0;height:0;position:absolute;}
+.tog-track{position:absolute;inset:0;background:rgba(255,255,255,.1);border-radius:12px;transition:background .3s;}
+.tog input:checked+.tog-track{background:var(--neon);}
+.tog-knob{position:absolute;top:3px;left:3px;width:17px;height:17px;background:#fff;border-radius:50%;transition:left .3s;}
+.tog input:checked~.tog-knob{left:22px;}
+.ach-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.ach-item{background:var(--dark3);border-radius:10px;padding:13px;text-align:center;cursor:pointer;transition:all .2s;}
+.ach-item:hover{background:rgba(0,255,178,.06);}
+.ach-ic{font-size:24px;margin-bottom:6px;}
+.ach-lb{font-size:11px;font-weight:700;color:var(--text2);}
+.stat-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.stat-row:last-child{border-bottom:none;}
+.sr-l{color:var(--text2);font-size:13px;}
+.sr-v{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--neon);}
+
+/* TOAST */
+#toast{position:fixed;bottom:26px;right:26px;z-index:99999;background:var(--card2);border:1px solid rgba(0,255,178,.3);border-radius:12px;padding:12px 20px;color:var(--neon);font-size:14px;font-weight:600;transform:translateY(65px);opacity:0;transition:all .4s cubic-bezier(.23,1,.32,1);box-shadow:0 8px 32px rgba(0,0,0,.5);max-width:320px;}
+#toast.show{transform:translateY(0);opacity:1;}
+
+/* RESPONSIVE */
+@media(max-width:1100px){.feats-grid{grid-template-columns:repeat(2,1fr);}.wkt-grid{grid-template-columns:repeat(2,1fr);}.profile-cols{grid-template-columns:1fr 1fr;}}
+@media(max-width:900px){
+  .nav-links{display:none;}.hamburger{display:flex;}
+  .dash-wrap{grid-template-columns:1fr;}.sidebar{display:none;}
+  .dash-body{padding:18px;}
+  .metrics-grid{grid-template-columns:repeat(2,1fr);}
+  .charts-row{grid-template-columns:1fr;}
+  .ai-wrap{grid-template-columns:1fr;}.ai-sidebar{display:none;}
+  .ai-chat-main{height:calc(100vh - 64px);}
+  .nut-wrap{grid-template-columns:1fr;padding:18px;}
+  .bmi-grid{grid-template-columns:1fr;}
+  .wkt-grid{grid-template-columns:1fr;}
+  .profile-cols{grid-template-columns:1fr;}
+  .profile-hero{flex-direction:column;text-align:center;}
+  .feats-grid{grid-template-columns:1fr;}
+  .feats-sec{padding:60px 20px;}
+  nav{padding:0 16px;}
+}
+@media(max-width:600px){.metrics-grid{grid-template-columns:1fr;}.stats-bar{grid-template-columns:repeat(3,1fr);}.sbi:nth-child(n+4){display:none;}}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div id="toast"></div>
+
+<!-- ═══════════════════════════════════════
+     AUTH SCREEN
+═══════════════════════════════════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">⚡ FITVERSE AI</div>
+    <div class="auth-sub">Your AI-powered fitness universe</div>
+
+    <div class="auth-tabs">
+      <button class="atab active" onclick="switchTab('login')">Sign In</button>
+      <button class="atab" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div class="apanel active" id="panel-login">
+      <button class="sbtn" onclick="googleSignIn()">
+        <svg class="g-logo" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Continue with Google
+      </button>
+      <div class="dvdr"><span>or sign in with email</span></div>
+      <div class="fg"><label class="fl">EMAIL</label><input type="email" class="fi" id="li-email" placeholder="you@example.com"/></div>
+      <div class="fg"><label class="fl">PASSWORD</label><input type="password" class="fi" id="li-pass" placeholder="••••••••" onkeypress="if(event.key==='Enter')emailSignIn()"/></div>
+      <div class="aerr" id="li-err"></div>
+      <button class="abtn" id="li-btn" onclick="emailSignIn()">SIGN IN →</button>
+      <div class="dvdr"><span>or sign in with phone</span></div>
+      <div class="fg">
+        <label class="fl">PHONE NUMBER</label>
+        <div class="ph-row">
+          <select class="fi" id="ph-code" style="padding:12px 8px;">
+            <option value="+91">🇮🇳 +91</option>
+            <option value="+1">🇺🇸 +1</option>
+            <option value="+44">🇬🇧 +44</option>
+            <option value="+61">🇦🇺 +61</option>
+            <option value="+971">🇦🇪 +971</option>
+            <option value="+65">🇸🇬 +65</option>
+          </select>
+          <input type="tel" class="fi" id="ph-num" placeholder="9876543210"/>
+        </div>
+      </div>
+      <div id="recaptcha-container"></div>
+      <button class="abtn v2" id="ph-btn" onclick="sendOTP()">SEND OTP →</button>
+      <div id="otp-section" style="display:none;margin-top:14px;">
+        <div class="aok">✅ OTP sent! Check your messages.</div>
+        <div class="otp-row">
+          <input class="od" maxlength="1" id="o0" oninput="otpMove(this,0)"/>
+          <input class="od" maxlength="1" id="o1" oninput="otpMove(this,1)"/>
+          <input class="od" maxlength="1" id="o2" oninput="otpMove(this,2)"/>
+          <input class="od" maxlength="1" id="o3" oninput="otpMove(this,3)"/>
+          <input class="od" maxlength="1" id="o4" oninput="otpMove(this,4)"/>
+          <input class="od" maxlength="1" id="o5" oninput="otpMove(this,5)"/>
+        </div>
+        <button class="abtn v2" onclick="verifyOTP()">VERIFY OTP ✓</button>
+      </div>
+      <div class="aerr" id="ph-err"></div>
+      <div class="terms">By signing in you agree to our <a href="#">Terms</a> &amp; <a href="#">Privacy Policy</a></div>
+    </div>
+
+    <!-- SIGNUP -->
+    <div class="apanel" id="panel-signup">
+      <button class="sbtn" onclick="googleSignIn()">
+        <svg class="g-logo" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Sign up with Google
+      </button>
+      <div class="dvdr"><span>or create account with email</span></div>
+      <div class="fg"><label class="fl">FULL NAME</label><input type="text" class="fi" id="su-name" placeholder="Your Name"/></div>
+      <div class="fg"><label class="fl">EMAIL</label><input type="email" class="fi" id="su-email" placeholder="you@example.com"/></div>
+      <div class="fg"><label class="fl">PASSWORD</label><input type="password" class="fi" id="su-pass" placeholder="Min 6 characters" onkeypress="if(event.key==='Enter')emailSignUp()"/></div>
+      <div class="aerr" id="su-err"></div>
+      <button class="abtn" id="su-btn" onclick="emailSignUp()">CREATE ACCOUNT →</button>
+      <div class="terms">By creating an account you agree to our <a href="#">Terms</a> &amp; <a href="#">Privacy Policy</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     ONBOARDING
+═══════════════════════════════════════ -->
+<div id="onboard-screen">
+  <div class="ob-card">
+    <!-- Step 1 -->
+    <div class="ob-step active" id="obs-1">
+      <div class="ob-dots"><div class="ob-dot active"></div><div class="ob-dot"></div><div class="ob-dot"></div></div>
+      <div class="ob-title">What's your fitness goal? 🎯</div>
+      <div class="ob-sub">We'll personalize your entire experience around your goal.</div>
+      <div class="goal-grid">
+        <div class="gopt" onclick="pickGoal(this,'Lose Weight')"><div class="gi">📉</div><div class="gn">Lose Weight</div></div>
+        <div class="gopt" onclick="pickGoal(this,'Gain Muscle')"><div class="gi">💪</div><div class="gn">Gain Muscle</div></div>
+        <div class="gopt" onclick="pickGoal(this,'Stay Fit')"><div class="gi">🏃</div><div class="gn">Stay Fit</div></div>
+        <div class="gopt" onclick="pickGoal(this,'Improve Health')"><div class="gi">❤️</div><div class="gn">Improve Health</div></div>
+      </div>
+      <button class="ob-next" onclick="obNext(2)">NEXT →</button>
+    </div>
+    <!-- Step 2 -->
+    <div class="ob-step" id="obs-2">
+      <div class="ob-dots"><div class="ob-dot"></div><div class="ob-dot active"></div><div class="ob-dot"></div></div>
+      <div class="ob-title">Your body metrics 📏</div>
+      <div class="ob-sub">Used for BMI, calorie targets, and personalized plans.</div>
+      <div class="ob-row">
+        <div class="ob-g"><label class="ob-l">HEIGHT (cm)</label><input class="fi" type="number" id="ob-h" value="170" placeholder="170"/></div>
+        <div class="ob-g"><label class="ob-l">WEIGHT (kg)</label><input class="fi" type="number" id="ob-w" value="70" placeholder="70"/></div>
+        <div class="ob-g"><label class="ob-l">AGE</label><input class="fi" type="number" id="ob-age" value="25" placeholder="25"/></div>
+        <div class="ob-g"><label class="ob-l">GENDER</label><select class="fi" id="ob-gen"><option>Male</option><option>Female</option><option>Other</option></select></div>
+      </div>
+      <button class="ob-next" onclick="obNext(3)">NEXT →</button>
+    </div>
+    <!-- Step 3 -->
+    <div class="ob-step" id="obs-3">
+      <div class="ob-dots"><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot active"></div></div>
+      <div class="ob-title">Connect Health Data 📱</div>
+      <div class="ob-sub">Allow real step counting from your phone's motion sensor.</div>
+      <button class="health-row" onclick="requestMotion(this)">
+        <div class="hr-icon">📱</div>
+        <div class="hr-info"><div class="hr-title">Device Motion (Steps)</div><div class="hr-desc">Real step counting via phone accelerometer — FREE</div></div>
+        <div class="hr-badge" id="motion-badge">✓ Active</div>
+      </button>
+      <button class="health-row" onclick="requestHealthKit(this)">
+        <div class="hr-icon">🍎</div>
+        <div class="hr-info"><div class="hr-title">Apple HealthKit (iOS Safari)</div><div class="hr-desc">Real steps, calories, heart rate from Health app</div></div>
+        <div class="hr-badge" id="healthkit-badge">✓ Connected</div>
+      </button>
+      <button class="ob-next" onclick="finishOnboard()">🚀 LAUNCH FITVERSE</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MAIN APP
+═══════════════════════════════════════ -->
+<div id="app">
+  <nav>
+    <div class="nav-logo">⚡ FITVERSE AI</div>
+    <div class="nav-links">
+      <button class="nl active" onclick="showPage('home')">Home</button>
+      <button class="nl" onclick="showPage('dashboard')">Dashboard</button>
+      <button class="nl" onclick="showPage('ai')">AI Coach</button>
+      <button class="nl" onclick="showPage('nutrition')">Nutrition</button>
+      <button class="nl" onclick="showPage('workout')">Workouts</button>
+      <button class="nl" onclick="showPage('bmi')">BMI</button>
+      <button class="nl" onclick="showPage('profile')">Profile</button>
+    </div>
+    <div class="nav-right">
+      <div class="nav-user" onclick="showPage('profile')">
+        <div class="nav-av" id="nav-av">👤</div>
+        <span class="nav-uname" id="nav-uname">User</span>
+      </div>
+      <button class="nav-out" onclick="doSignOut()">Sign Out</button>
+    </div>
+    <button class="hamburger" onclick="toggleMob()"><span></span><span></span><span></span></button>
+  </nav>
+  <div class="mob-menu" id="mob-menu">
+    <button class="mb" onclick="showPage('home');closeMob()">🏠 Home</button>
+    <button class="mb" onclick="showPage('dashboard');closeMob()">📊 Dashboard</button>
+    <button class="mb" onclick="showPage('ai');closeMob()">🧠 AI Coach</button>
+    <button class="mb" onclick="showPage('nutrition');closeMob()">🍛 Nutrition</button>
+    <button class="mb" onclick="showPage('workout');closeMob()">🏋️ Workouts</button>
+    <button class="mb" onclick="showPage('bmi');closeMob()">📏 BMI</button>
+    <button class="mb" onclick="showPage('profile');closeMob()">👤 Profile</button>
+  </div>
+
+  <!-- HOME -->
+  <div id="page-home" class="page active">
+    <div class="hero">
+      <div class="hero-inner">
+        <div class="hero-badge"><div class="hbdot"></div>NEXT-GEN FITNESS ECOSYSTEM</div>
+        <h1 class="hero-h1">YOUR FITNESS<br><span>UNIVERSE AWAITS</span></h1>
+        <p class="hero-p">AI-powered health tracking with immersive 3D experiences, Indian food intelligence, and fully personalized coaching.</p>
+        <div class="hero-btns">
+          <button class="btn-p" onclick="showPage('dashboard')">🚀 LAUNCH DASHBOARD</button>
+          <button class="btn-o" onclick="showPage('ai')">🧠 MEET AI COACH</button>
+        </div>
+      </div>
+    </div>
+    <div class="stats-bar">
+      <div class="sbi"><div class="sbi-val" id="cnt1">0</div><div class="sbi-lbl">ACTIVE USERS</div></div>
+      <div class="sbi"><div class="sbi-val">500+</div><div class="sbi-lbl">INDIAN FOODS</div></div>
+      <div class="sbi"><div class="sbi-val">AI</div><div class="sbi-lbl">GEMINI POWERED</div></div>
+      <div class="sbi"><div class="sbi-val">3D</div><div class="sbi-lbl">LIVE DASHBOARD</div></div>
+      <div class="sbi"><div class="sbi-val">24/7</div><div class="sbi-lbl">AI COACH</div></div>
+    </div>
+    <div class="feats-sec" style="text-align:center">
+      <div class="sec-tag">PLATFORM FEATURES</div>
+      <h2 class="sec-h">Everything to <span>Dominate</span> Your Fitness</h2>
+      <p class="sec-p">Six powerful systems working together to transform your health journey.</p>
+      <div class="feats-grid">
+        <div class="fc" onclick="showPage('dashboard')"><div class="fc-num">01 — IMMERSIVE</div><div class="fc-icon" style="background:rgba(0,255,178,.1)">🌍</div><div class="fc-name">3D LIVE DASHBOARD</div><div class="fc-desc">Real-time 3D universe responding to your steps, calories, and activity rings live.</div></div>
+        <div class="fc" onclick="showPage('ai')"><div class="fc-num">02 — INTELLIGENCE</div><div class="fc-icon" style="background:rgba(123,97,255,.1)">🧠</div><div class="fc-name">GEMINI AI COACH</div><div class="fc-desc">Personal trainer + nutritionist powered by Gemini. Expert in Indian food and fitness.</div></div>
+        <div class="fc" onclick="showPage('nutrition')"><div class="fc-num">03 — CULTURAL</div><div class="fc-icon" style="background:rgba(255,107,53,.1)">🍛</div><div class="fc-name">INDIAN NUTRITION AI</div><div class="fc-desc">Largest Indian food database with AI calorie estimation for homemade dishes.</div></div>
+        <div class="fc" onclick="showPage('workout')"><div class="fc-num">04 — PERSONALIZED</div><div class="fc-icon" style="background:rgba(0,255,178,.1)">🏋️</div><div class="fc-name">SMART WORKOUTS</div><div class="fc-desc">AI-generated workout plans adapted to your goals, level, and equipment.</div></div>
+        <div class="fc" onclick="showPage('bmi')"><div class="fc-num">05 — ANALYSIS</div><div class="fc-icon" style="background:rgba(123,97,255,.1)">📊</div><div class="fc-name">BMI + BODY ANALYSIS</div><div class="fc-desc">Advanced BMI analysis with AI-powered personalized planning.</div></div>
+        <div class="fc" onclick="showPage('profile')"><div class="fc-num">06 — TRACKING</div><div class="fc-icon" style="background:rgba(255,107,53,.1)">🏆</div><div class="fc-name">ACHIEVEMENTS</div><div class="fc-desc">Streaks, badges, all-time stats, and weekly AI progress reports.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="page-dashboard" class="page">
+    <div class="dash-wrap">
+      <div class="sidebar">
+        <div class="sb-lbl">OVERVIEW</div>
+        <button class="sb-item active" onclick="showPage('dashboard')"><span class="sb-ic">📊</span>Dashboard</button>
+        <button class="sb-item" onclick="showPage('ai')"><span class="sb-ic">🧠</span>AI Coach<span class="sb-badge">Live</span></button>
+        <div class="sb-lbl">HEALTH</div>
+        <button class="sb-item" onclick="showPage('nutrition')"><span class="sb-ic">🍛</span>Nutrition</button>
+        <button class="sb-item" onclick="showPage('workout')"><span class="sb-ic">🏋️</span>Workouts</button>
+        <button class="sb-item" onclick="showPage('bmi')"><span class="sb-ic">📏</span>BMI Analyzer</button>
+        <div class="sb-lbl">ACCOUNT</div>
+        <button class="sb-item" onclick="showPage('profile')"><span class="sb-ic">👤</span>Profile</button>
+        <button class="sb-item" onclick="doSignOut()"><span class="sb-ic">🚪</span>Sign Out</button>
+      </div>
+      <div class="dash-body">
+        <div class="dash-top">
+          <div>
+            <div class="dt-greet-lbl" id="dash-greet">Good morning ☀️</div>
+            <div class="dt-greet-name">Welcome back, <span id="dash-name">Warrior</span> 🔥</div>
+          </div>
+          <div class="dt-actions">
+            <button class="dt-btn" onclick="syncHealth()">🔄 Sync Health</button>
+            <button class="dt-btn" onclick="showPage('nutrition')">🍛 Log Food</button>
+          </div>
+        </div>
+        <!-- Live Step Banner -->
+        <div class="step-banner">
+          <div class="stb-icon">📱</div>
+          <div class="stb-info">
+            <div class="stb-title" id="stb-title">Device Motion Active</div>
+            <div class="stb-sub" id="stb-sub">Real step counting via accelerometer • Last sync: <span id="last-sync">Now</span></div>
+          </div>
+          <div class="stb-count" id="stb-count">—</div>
+          <button class="stb-sync" onclick="syncHealth()">⚡ SYNC</button>
+        </div>
+        <!-- Globe -->
+        <div class="globe-card">
+          <canvas id="dash-canvas"></canvas>
+          <div class="globe-ov">
+            <div><div class="go-lbl">LIVE FITNESS UNIVERSE</div><div style="color:var(--text2);font-size:11px;margin-top:3px">Real-time activity tracking</div></div>
+            <div style="text-align:right"><div style="color:var(--text2);font-size:11px;margin-bottom:3px">TODAY'S STEPS</div><div class="go-steps" id="go-steps">—</div></div>
+          </div>
+        </div>
+        <!-- Metrics -->
+        <div class="metrics-grid">
+          <div class="mc mc-g"><div class="mc-icon">👣</div><div class="mc-lbl">STEPS TODAY</div><div class="mc-val g" id="m-steps">—</div><div class="mc-sub" id="m-steps-s">Syncing…</div><div class="pbar"><div class="pfill pf-g" id="p-steps" style="width:0%"></div></div></div>
+          <div class="mc mc-p"><div class="mc-icon">🔥</div><div class="mc-lbl">CALORIES BURNED</div><div class="mc-val p" id="m-cal">—</div><div class="mc-sub" id="m-cal-s">Syncing…</div><div class="pbar"><div class="pfill pf-p" id="p-cal" style="width:0%"></div></div></div>
+          <div class="mc mc-o"><div class="mc-icon">🏃</div><div class="mc-lbl">DISTANCE</div><div class="mc-val o" id="m-dist">—</div><div class="mc-sub" id="m-dist-s">Syncing…</div><div class="pbar"><div class="pfill pf-o" id="p-dist" style="width:0%"></div></div></div>
+          <div class="mc mc-pk"><div class="mc-icon">⚡</div><div class="mc-lbl">ACTIVE MIN</div><div class="mc-val pk" id="m-active">—</div><div class="mc-sub" id="m-active-s">Syncing…</div><div class="pbar"><div class="pfill pf-pk" id="p-active" style="width:0%"></div></div></div>
+        </div>
+        <!-- Charts -->
+        <div class="charts-row">
+          <div class="chart-card"><div class="cc-title">WEEKLY STEPS</div><div class="cc-sub">Steps per day this week</div><canvas id="steps-chart" height="85"></canvas></div>
+          <div class="chart-card"><div class="cc-title">ACTIVITY RINGS</div><div class="cc-sub">Move · Exercise · Stand</div>
+            <div class="rings-flex">
+              <svg width="96" height="96" viewBox="0 0 96 96">
+                <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(0,255,178,.12)" stroke-width="8"/>
+                <circle cx="48" cy="48" r="40" fill="none" stroke="#00FFB2" stroke-width="8" stroke-dasharray="251" stroke-dashoffset="40" stroke-linecap="round" transform="rotate(-90 48 48)"/>
+                <circle cx="48" cy="48" r="28" fill="none" stroke="rgba(123,97,255,.12)" stroke-width="8"/>
+                <circle cx="48" cy="48" r="28" fill="none" stroke="#7B61FF" stroke-width="8" stroke-dasharray="176" stroke-dashoffset="53" stroke-linecap="round" transform="rotate(-90 48 48)"/>
+                <circle cx="48" cy="48" r="16" fill="none" stroke="rgba(255,107,53,.12)" stroke-width="8"/>
+                <circle cx="48" cy="48" r="16" fill="none" stroke="#FF6B35" stroke-width="8" stroke-dasharray="101" stroke-dashoffset="20" stroke-linecap="round" transform="rotate(-90 48 48)"/>
+              </svg>
+              <div class="ring-leg">
+                <div class="rl-item"><div class="rl-dot" style="background:#00FFB2"></div><div><div class="rl-name">Move</div><div class="rl-pct" style="color:#00FFB2">84%</div></div></div>
+                <div class="rl-item"><div class="rl-dot" style="background:#7B61FF"></div><div><div class="rl-name">Exercise</div><div class="rl-pct" style="color:#7B61FF">70%</div></div></div>
+                <div class="rl-item"><div class="rl-dot" style="background:#FF6B35"></div><div><div class="rl-name">Stand</div><div class="rl-pct" style="color:#FF6B35">80%</div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Food log -->
+        <div class="food-log-card">
+          <div class="fl-hdr"><div class="fl-title">TODAY'S NUTRITION LOG</div><button class="fl-add" onclick="showPage('nutrition')">+ ADD FOOD</button></div>
+          <div class="fl-entry"><div class="fl-em">🌾</div><div><div class="fl-name">Poha</div><div class="fl-meta">Breakfast · 7:30 AM</div></div><div class="fl-cal">270 kcal</div></div>
+          <div class="fl-entry"><div class="fl-em">🫓</div><div><div class="fl-name">Aloo Paratha</div><div class="fl-meta">Lunch · 1:00 PM</div></div><div class="fl-cal">420 kcal</div></div>
+          <div class="fl-entry"><div class="fl-em">🍵</div><div><div class="fl-name">Chai + Biscuits</div><div class="fl-meta">Snack · 4:30 PM</div></div><div class="fl-cal">180 kcal</div></div>
+          <div class="fl-entry" style="border:1px dashed rgba(0,255,178,.15)" onclick="showPage('nutrition')">
+            <div class="fl-em">+</div><div><div class="fl-name" style="color:var(--neon)">Log Dinner</div><div class="fl-meta">Tap to add</div></div><div class="fl-cal" style="color:var(--text3)">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI COACH -->
+  <div id="page-ai" class="page">
+    <div class="ai-wrap">
+      <div class="ai-sidebar">
+        <div class="ai-prof">
+          <div class="ai-av-wrap"><div class="ai-big-av">🤖</div><div class="ai-dot"></div></div>
+          <div class="ai-name">FITVERSE AI</div>
+          <div class="ai-role">Personal Trainer + Nutritionist<br>Powered by Google Gemini</div>
+          <div class="ai-mini-stats">
+            <div class="ams-item"><div class="ams-val">Indian</div><div class="ams-lbl">Diet Expert</div></div>
+            <div class="ams-item"><div class="ams-val">4.9★</div><div class="ams-lbl">Rating</div></div>
+            <div class="ams-item"><div class="ams-val">24/7</div><div class="ams-lbl">Available</div></div>
+            <div class="ams-item"><div class="ams-val">Gemini</div><div class="ams-lbl">Powered</div></div>
+          </div>
+        </div>
+        <div class="qp-card">
+          <div class="qp-hd">QUICK PROMPTS</div>
+          <button class="qp-btn" onclick="quickSend('Give me a 30-min morning workout for weight loss, no equipment needed')">🏃 Morning Workout</button>
+          <button class="qp-btn" onclick="quickSend('Full day Indian meal plan for muscle gain with macros and calorie count')">🍛 Indian Muscle Gain Diet</button>
+          <button class="qp-btn" onclick="quickSend('Calories in 2 rotis, 1 bowl dal tadka, aloo sabzi and 1 glass lassi?')">🔥 Calorie Count</button>
+          <button class="qp-btn" onclick="quickSend('Create a 7-day Indian weight loss meal plan under 1500 calories per day')">📅 7-Day Plan</button>
+          <button class="qp-btn" onclick="quickSend('Best yoga poses for lower back pain with step-by-step instructions')">🧘 Yoga for Back Pain</button>
+          <button class="qp-btn" onclick="quickSend('How much protein do I need and best Indian protein sources vegetarian?')">💪 Protein Tips</button>
+        </div>
+      </div>
+      <div class="ai-chat-main">
+        <div class="chat-topbar">
+          <div class="ct-av">🤖</div>
+          <div><div class="ct-name">FITVERSE AI COACH</div><div class="ct-status"><div class="ct-dot"></div>Online · Gemini · Indian Fitness Expert</div></div>
+          <button class="ct-clear" onclick="clearChat()" title="Clear">🗑</button>
+        </div>
+        <div class="chat-msgs" id="chat-msgs">
+          <div class="mw">
+            <div class="m-av aav">🤖</div>
+            <div>
+              <div class="m-bub ai">🙏 <strong>Namaste! I'm your FITVERSE AI Coach</strong>, powered by Google Gemini.<br><br>I'm specialized in <strong>Indian nutrition &amp; fitness</strong> — from dal-chawal calories to the best yoga for your body type. I can create personalized workout plans, meal plans, and answer any health question.<br><br>What's your fitness goal today? 💪</div>
+              <div class="m-time">FITVERSE AI · Just now</div>
+            </div>
+          </div>
+        </div>
+        <div class="chat-bottom">
+          <textarea class="chat-ta" id="chat-in" placeholder="Ask about diet, workouts, health…" rows="1"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"
+            oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,130)+'px'"></textarea>
+          <button class="chat-send" id="send-btn" onclick="sendMsg()">↗</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NUTRITION -->
+  <div id="page-nutrition" class="page">
+    <div class="nut-wrap">
+      <div>
+        <div class="scanner-box" onclick="toast('📸 Full camera feature available in FITVERSE mobile app!')">
+          <span class="sc-emoji">📸</span>
+          <div class="sc-title">AI FOOD SCANNER</div>
+          <div class="sc-desc">Point camera at any food for instant AI calorie detection</div>
+        </div>
+        <div class="search-row">
+          <input type="text" class="sf" id="food-search" placeholder="Search: Biryani, Idli, Dal Makhani, Poha…" oninput="filterFoods(this.value)"/>
+          <button class="ai-search-btn" onclick="aiFood()">🔍 AI SEARCH</button>
+        </div>
+        <div class="cat-row">
+          <button class="cat-btn active" onclick="catFilter(this,'all')">All</button>
+          <button class="cat-btn" onclick="catFilter(this,'breakfast')">Breakfast</button>
+          <button class="cat-btn" onclick="catFilter(this,'lunch')">Lunch/Dinner</button>
+          <button class="cat-btn" onclick="catFilter(this,'snacks')">Snacks</button>
+          <button class="cat-btn" onclick="catFilter(this,'sweets')">Sweets</button>
+        </div>
+        <div class="foods-grid" id="foods-grid"></div>
+      </div>
+      <div>
+        <div class="nc">
+          <div class="nc-title">CALORIES TODAY</div>
+          <div class="cal-big">870</div>
+          <div class="cal-of">of 2,000 kcal goal</div>
+          <div class="pbar" style="height:6px"><div class="pfill pf-g" style="width:43.5%"></div></div>
+          <div style="display:flex;justify-content:space-between;margin-top:11px"><span style="color:var(--text2);font-size:13px">Remaining</span><span style="font-family:'Orbitron',monospace;color:var(--neon);font-size:14px;font-weight:700">1,130 kcal</span></div>
+        </div>
+        <div class="nc">
+          <div class="nc-title">MACRONUTRIENTS</div>
+          <div class="macro-row"><div class="mr-top"><span class="mr-name">Protein</span><span class="mr-val">32g / 120g</span></div><div class="mr-bar"><div class="mr-fill" style="width:27%;background:#00FFB2"></div></div></div>
+          <div class="macro-row"><div class="mr-top"><span class="mr-name">Carbs</span><span class="mr-val">145g / 250g</span></div><div class="mr-bar"><div class="mr-fill" style="width:58%;background:#7B61FF"></div></div></div>
+          <div class="macro-row"><div class="mr-top"><span class="mr-name">Fats</span><span class="mr-val">28g / 65g</span></div><div class="mr-bar"><div class="mr-fill" style="width:43%;background:#FF6B35"></div></div></div>
+          <div class="macro-row" style="margin-bottom:0"><div class="mr-top"><span class="mr-name">Fiber</span><span class="mr-val">8g / 30g</span></div><div class="mr-bar"><div class="mr-fill" style="width:27%;background:#FF1493"></div></div></div>
+        </div>
+        <div class="nc">
+          <div class="nc-title">TODAY'S LOG</div>
+          <div class="fl-entry" style="padding:9px 11px;margin-bottom:6px;border-radius:9px"><div class="fl-em" style="font-size:20px;width:28px">🌾</div><div><div class="fl-name" style="font-size:13px">Poha</div></div><div class="fl-cal" style="font-size:13px">270</div></div>
+          <div class="fl-entry" style="padding:9px 11px;margin-bottom:6px;border-radius:9px"><div class="fl-em" style="font-size:20px;width:28px">🫓</div><div><div class="fl-name" style="font-size:13px">Aloo Paratha</div></div><div class="fl-cal" style="font-size:13px">420</div></div>
+          <div class="fl-entry" style="padding:9px 11px;border-radius:9px"><div class="fl-em" style="font-size:20px;width:28px">🍵</div><div><div class="fl-name" style="font-size:13px">Chai + Biscuits</div></div><div class="fl-cal" style="font-size:13px">180</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKOUT -->
+  <div id="page-workout" class="page">
+    <div class="wkt-wrap">
+      <div class="wkt-top">
+        <div><div class="wkt-title">WORKOUT PLANS</div><div style="color:var(--text2);margin-top:5px">AI-generated routines for your goals</div></div>
+        <div class="wkt-filters">
+          <button class="wf active" onclick="wFilter(this,'all')">⚡ ALL</button>
+          <button class="wf" onclick="wFilter(this,'home')">🏠 HOME</button>
+          <button class="wf" onclick="wFilter(this,'gym')">🏋️ GYM</button>
+          <button class="wf" onclick="wFilter(this,'yoga')">🧘 YOGA</button>
+          <button class="wf" onclick="wFilter(this,'hiit')">🔥 HIIT</button>
+          <button class="wf" onclick="wFilter(this,'cardio')">🏃 CARDIO</button>
+        </div>
+      </div>
+      <div class="wkt-grid" id="wkt-grid"></div>
+    </div>
+  </div>
+
+  <!-- BMI -->
+  <div id="page-bmi" class="page">
+    <div class="bmi-wrap">
+      <div class="bmi-title">BMI ANALYZER</div>
+      <div class="bmi-sub">Calculate your Body Mass Index and get a personalized AI fitness plan</div>
+      <div class="bmi-grid">
+        <div class="bmi-form">
+          <div class="bf-title">BODY METRICS</div>
+          <div class="bf-row">
+            <div class="bf-g"><label class="bf-l">HEIGHT (cm)</label><input type="number" class="bf-i" id="bh" value="170" min="100" max="250"/></div>
+            <div class="bf-g"><label class="bf-l">WEIGHT (kg)</label><input type="number" class="bf-i" id="bw" value="70" min="20" max="300"/></div>
+          </div>
+          <div class="bf-row">
+            <div class="bf-g"><label class="bf-l">AGE</label><input type="number" class="bf-i" id="ba" value="25" min="10" max="100"/></div>
+            <div class="bf-g"><label class="bf-l">GENDER</label><select class="bf-s" id="bg"><option>Male</option><option>Female</option><option>Other</option></select></div>
+          </div>
+          <div class="bf-g"><label class="bf-l">ACTIVITY LEVEL</label><select class="bf-s" id="bact"><option>Sedentary</option><option selected>Lightly Active</option><option>Moderately Active</option><option>Very Active</option></select></div>
+          <div class="bf-g"><label class="bf-l">FITNESS GOAL</label><select class="bf-s" id="bgoal"><option>Lose Weight</option><option>Gain Muscle</option><option>Maintain</option><option>Improve Fitness</option></select></div>
+          <button class="calc-btn" onclick="calcBMI()">⚡ CALCULATE BMI</button>
+        </div>
+        <div class="bmi-result">
+          <div id="bmi-placeholder"><div class="bmi-ph-icon">📊</div><div style="font-family:'Orbitron',monospace;font-size:16px;font-weight:700;margin-bottom:11px">YOUR RESULT</div><div style="font-size:14px;line-height:1.7;color:var(--text2)">Fill in your metrics and click Calculate to get your personalized BMI analysis and AI fitness plan.</div></div>
+          <div id="bmi-inner">
+            <div class="bmi-big" id="bmi-num"></div>
+            <div class="bmi-cat" id="bmi-cat"></div>
+            <div class="bmi-gauge"><div class="bmi-gauge-bar"><div class="bmi-needle" id="bmi-needle" style="left:0%"></div></div><div class="bmi-gauge-lbls"><span>Under</span><span>Normal</span><span>Over</span><span>Obese</span></div></div>
+            <div class="bmi-advice" id="bmi-advice"></div>
+            <button class="bmi-ai-btn" onclick="bmiAI()">🧠 GET FULL AI PLAN</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div id="page-profile" class="page">
+    <div class="profile-wrap">
+      <div class="profile-hero">
+        <div class="ph-av" id="ph-av">👤</div>
+        <div>
+          <div class="ph-name" id="ph-name">Fitness Warrior</div>
+          <div class="ph-email" id="ph-email">user@fitverse.ai</div>
+          <div class="ph-badges">
+            <span class="ph-badge phb-g">PRO MEMBER</span>
+            <span class="ph-badge phb-p" id="auth-provider-badge">GOOGLE CONNECTED</span>
+            <span class="ph-badge phb-o">45 DAY STREAK 🔥</span>
+          </div>
+        </div>
+      </div>
+      <div class="profile-cols">
+        <div class="pcol">
+          <div class="pcol-head">⚙️ SETTINGS</div>
+          <div class="s-row"><span class="s-lbl">Motion Tracking</span><label class="tog"><input type="checkbox" checked/><div class="tog-track"></div><div class="tog-knob"></div></label></div>
+          <div class="s-row"><span class="s-lbl">Daily Reminders</span><label class="tog"><input type="checkbox" checked/><div class="tog-track"></div><div class="tog-knob"></div></label></div>
+          <div class="s-row"><span class="s-lbl">AI Suggestions</span><label class="tog"><input type="checkbox" checked/><div class="tog-track"></div><div class="tog-knob"></div></label></div>
+          <div class="s-row"><span class="s-lbl">Weekly Reports</span><label class="tog"><input type="checkbox"/><div class="tog-track"></div><div class="tog-knob"></div></label></div>
+          <div class="s-row"><span class="s-lbl">Step Notifications</span><label class="tog"><input type="checkbox" checked/><div class="tog-track"></div><div class="tog-knob"></div></label></div>
+        </div>
+        <div class="pcol">
+          <div class="pcol-head">🏆 ACHIEVEMENTS</div>
+          <div class="ach-grid">
+            <div class="ach-item"><div class="ach-ic">🔥</div><div class="ach-lb">45 DAY STREAK</div></div>
+            <div class="ach-item"><div class="ach-ic">👣</div><div class="ach-lb">100K STEPS</div></div>
+            <div class="ach-item"><div class="ach-ic">🥇</div><div class="ach-lb">FIRST GOAL</div></div>
+            <div class="ach-item"><div class="ach-ic">🧠</div><div class="ach-lb">AI MASTER</div></div>
+            <div class="ach-item"><div class="ach-ic">🍛</div><div class="ach-lb">FOOD TRACKER</div></div>
+            <div class="ach-item" style="opacity:.3"><div class="ach-ic">🏅</div><div class="ach-lb">MARATHON</div></div>
+          </div>
+        </div>
+        <div class="pcol">
+          <div class="pcol-head">📈 ALL-TIME STATS</div>
+          <div class="stat-row"><span class="sr-l">Total Steps</span><span class="sr-v">423,819</span></div>
+          <div class="stat-row"><span class="sr-l">Calories Burned</span><span class="sr-v">56,230</span></div>
+          <div class="stat-row"><span class="sr-l">Workouts Done</span><span class="sr-v">67</span></div>
+          <div class="stat-row"><span class="sr-l">Distance</span><span class="sr-v">318 km</span></div>
+          <div class="stat-row"><span class="sr-l">Foods Logged</span><span class="sr-v">189</span></div>
+          <div class="stat-row"><span class="sr-l">AI Chats</span><span class="sr-v">34</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div><!-- end #app -->
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  FIREBASE CONFIG — Your actual project config
+// ═══════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyB_mv9LFNii4Xvx9dIz02NCKcz_fzd2vO0",
+  authDomain: "fitverse-ai21.firebaseapp.com",
+  projectId: "fitverse-ai21",
+  storageBucket: "fitverse-ai21.firebasestorage.app",
+  messagingSenderId: "227471841072",
+  appId: "1:227471841072:web:fb844fd06e0b6a847a5af5",
+  measurementId: "G-10SXG8W2NX"
+};
+
+// Debug helper: show the current origin so you can confirm it matches an authorized domain.
+// (Firebase rejects `file://` / `null` origins, so use Live Server or a real host.)
+console.log('App origin:', window.location.origin);
+if (window.location.origin === 'null' || window.location.protocol === 'file:') {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#050810;font-family:Rajdhani,sans-serif;padding:20px"><div style="background:#111827;border:1px solid rgba(0,255,178,0.2);border-radius:24px;padding:44px;max-width:520px;text-align:center"><div style="font-size:56px;margin-bottom:18px">⚠️</div><h2 style="color:#00FFB2;font-family:monospace;font-size:20px;margin-bottom:14px">INVALID ORIGIN</h2><p style="color:#8892B0;font-size:15px;line-height:1.7;margin-bottom:22px">Firebase auth requires a valid web origin.<br><br><strong style="color:#E8EAFF">To fix this:</strong><br>1. Run this page via a local server (e.g., VS Code Live Server).<br>2. Open it via <strong style="color:#00FFB2">http://localhost:5500</strong> (or similar).<br>3. Confirm the origin matches an authorized domain in Firebase.</p><button onclick="location.reload()" style="background:linear-gradient(135deg,#00FFB2,#7B61FF);color:#000;border:none;padding:13px 30px;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:1px">🔄 RETRY</button></div></div>';
+  });
+}
+
+// The API key is kept on the server in server.js. The browser calls /api/gemini (same-origin) to avoid CORS.
+const GEMINI_KEY = '';
+
+// ── Init Firebase with full error handling ──
+let auth = null;
+let firebaseReady = false;
+
+try {
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  firebaseReady = true;
+
+  // Auth state listener — fires when user logs in/out
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      currentUser = user;
+      const wasOnboarded = localStorage.getItem('fv_ob_' + user.uid);
+      if (!wasOnboarded) showScreen('onboard');
+      else launchApp(user);
+    }
+  });
+
+  console.log('✅ Firebase initialized successfully');
+
+} catch(e) {
+  console.error('Firebase init failed:', e.message);
+  firebaseReady = false;
+  document.addEventListener('DOMContentLoaded', () => {
+    const card = document.querySelector('.auth-card');
+    if (card) {
+      const b = document.createElement('div');
+      b.style.cssText = 'background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:12px;padding:13px 16px;margin-bottom:18px;color:#fca5a5;font-size:13px;line-height:1.6;text-align:center;';
+      b.innerHTML = '<strong>⚠️ Firebase CDN Blocked</strong><br>Disable browser extensions, switch to Chrome, or use VS Code Live Server.<br><small style="color:#8892B0">Err: ' + e.message + '</small>';
+      card.insertBefore(b, card.firstChild);
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+let currentUser = null;
+let chatHistory = [];
+let confirmResult = null;
+let recaptchaVerifier = null;
+let userGoal = 'Lose Weight';
+let stepCount = 0;
+let motionActive = false;
+let threeInited = false;
+let chartInited = false;
+let lastAcc = null;
+let stepThreshold = 12;
+
+// ═══════════════════════════════════════════════════════
+//  BG PARTICLES
+// ═══════════════════════════════════════════════════════
+(()=>{
+  const c = document.getElementById('bg-canvas');
+  const ctx = c.getContext('2d');
+  const resize = () => { c.width = innerWidth; c.height = innerHeight; };
+  resize(); window.addEventListener('resize', resize);
+  const pts = Array.from({length:65}, () => ({
+    x: Math.random()*innerWidth, y: Math.random()*innerHeight,
+    vx: (Math.random()-.5)*.3, vy: (Math.random()-.5)*.3
+  }));
+  const draw = () => {
+    ctx.clearRect(0,0,c.width,c.height);
+    pts.forEach(p => {
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0||p.x>c.width) p.vx*=-1;
+      if(p.y<0||p.y>c.height) p.vy*=-1;
+      ctx.beginPath(); ctx.arc(p.x,p.y,1.3,0,Math.PI*2);
+      ctx.fillStyle='rgba(0,255,178,.4)'; ctx.fill();
+    });
+    for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++){
+      const d = Math.hypot(pts[i].x-pts[j].x, pts[i].y-pts[j].y);
+      if(d<110){
+        ctx.beginPath(); ctx.moveTo(pts[i].x,pts[i].y); ctx.lineTo(pts[j].x,pts[j].y);
+        ctx.strokeStyle=`rgba(0,255,178,${.05*(1-d/110)})`; ctx.stroke();
+      }
+    }
+    requestAnimationFrame(draw);
+  };
+  draw();
+})();
+
+// ═══════════════════════════════════════════════════════
+//  SCREEN MANAGEMENT
+// ═══════════════════════════════════════════════════════
+function showScreen(name) {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('onboard-screen').classList.remove('active');
+  document.getElementById('app').style.display = 'none';
+  if (name === 'auth') document.getElementById('auth-screen').style.display = 'flex';
+  if (name === 'onboard') document.getElementById('onboard-screen').classList.add('active');
+  if (name === 'app') document.getElementById('app').style.display = 'block';
+}
+
+// ═══════════════════════════════════════════════════════
+//  AUTH FUNCTIONS
+// ═══════════════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.atab').forEach((t,i) =>
+    t.classList.toggle('active', (tab==='login'&&i===0)||(tab==='signup'&&i===1)));
+  document.getElementById('panel-login').classList.toggle('active', tab==='login');
+  document.getElementById('panel-signup').classList.toggle('active', tab==='signup');
+}
+
+// Google Sign In
+function googleSignIn() {
+  if (!firebaseReady || !auth) { showErr('li-err', '⚠️ Firebase not loaded. Disable extensions or try Chrome.'); return; }
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider)
+    .then(result => { currentUser = result.user; })
+    .catch(e => {
+      if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user') {
+        auth.signInWithRedirect(provider);
+      } else {
+        showErr('li-err', friendlyError(e));
+      }
+    });
+}
+
+// Email Sign In
+function emailSignIn() {
+  const email = document.getElementById('li-email').value.trim();
+  const pass  = document.getElementById('li-pass').value;
+  if (!email || !pass) { showErr('li-err','Enter email and password.'); return; }
+  if (!firebaseReady || !auth) { showErr('li-err', '⚠️ Firebase not loaded. Disable extensions or try Chrome.'); return; }
+  setBtn('li-btn', true, 'SIGNING IN…');
+  clearErr('li-err');
+  auth.signInWithEmailAndPassword(email, pass)
+    .catch(e => { showErr('li-err', friendlyError(e)); setBtn('li-btn', false, 'SIGN IN →'); });
+}
+
+// Email Sign Up
+function emailSignUp() {
+  const name  = document.getElementById('su-name').value.trim();
+  const email = document.getElementById('su-email').value.trim();
+  const pass  = document.getElementById('su-pass').value;
+  if (!name||!email||!pass) { showErr('su-err','Please fill in all fields.'); return; }
+  if (pass.length < 6) { showErr('su-err','Password must be at least 6 characters.'); return; }
+  if (!firebaseReady || !auth) { showErr('su-err', '⚠️ Firebase not loaded. Disable extensions or try Chrome.'); return; }
+  setBtn('su-btn', true, 'CREATING…');
+  clearErr('su-err');
+  auth.createUserWithEmailAndPassword(email, pass)
+    .then(result => result.user.updateProfile({ displayName: name }))
+    .catch(e => { showErr('su-err', friendlyError(e)); setBtn('su-btn', false, 'CREATE ACCOUNT →'); });
+}
+
+// Phone OTP
+function sendOTP() {
+  const phone = document.getElementById('ph-num').value.trim();
+  const code  = document.getElementById('ph-code').value;
+  if (!phone || phone.length < 7) { showErr('ph-err','Enter a valid phone number.'); return; }
+  if (!firebaseReady || !auth) { showErr('ph-err', '⚠️ Firebase not loaded. Disable extensions or try Chrome.'); return; }
+  clearErr('ph-err');
+  setBtn('ph-btn', true, 'SENDING…');
+  try {
+    if (!recaptchaVerifier) {
+      recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+        size: 'normal',
+        callback: () => {}
+      });
+    }
+    auth.signInWithPhoneNumber(code + phone, recaptchaVerifier)
+      .then(result => {
+        confirmResult = result;
+        document.getElementById('otp-section').style.display = 'block';
+        setBtn('ph-btn', false, 'RESEND OTP');
+        document.getElementById('o0').focus();
+        toast('📱 OTP sent to ' + code + phone);
+      })
+      .catch(e => {
+        showErr('ph-err', friendlyError(e));
+        setBtn('ph-btn', false, 'SEND OTP →');
+        if (recaptchaVerifier) { recaptchaVerifier.clear(); recaptchaVerifier = null; }
+      });
+  } catch(e) {
+    showErr('ph-err', 'Error: ' + e.message);
+    setBtn('ph-btn', false, 'SEND OTP →');
+  }
+}
+
+function otpMove(el, idx) {
+  if (el.value.length === 1 && idx < 5) document.getElementById('o'+(idx+1)).focus();
+  if (idx === 5) verifyOTP();
+}
+
+function verifyOTP() {
+  const otp = [0,1,2,3,4,5].map(i => document.getElementById('o'+i).value).join('');
+  if (otp.length !== 6) { showErr('ph-err','Enter all 6 digits.'); return; }
+  if (!confirmResult) { showErr('ph-err','Session expired. Re-send OTP.'); return; }
+  confirmResult.confirm(otp)
+    .catch(e => showErr('ph-err', 'Invalid OTP: ' + friendlyError(e)));
+}
+
+// Sign Out
+function doSignOut() {
+  if (!firebaseReady || !auth) { showScreen('auth'); return; }
+  auth.signOut().then(() => {
+    currentUser = null; chatHistory = [];
+    threeInited = false; chartInited = false;
+    showScreen('auth');
+    toast('👋 Signed out successfully');
+  });
+}
+
+// Error helper
+function friendlyError(e) {
+  const map = {
+    'auth/user-not-found': 'No account found. Please sign up.',
+    'auth/wrong-password': 'Incorrect password.',
+    'auth/email-already-in-use': 'Email already in use. Please sign in.',
+    'auth/invalid-email': 'Invalid email address.',
+    'auth/weak-password': 'Password too weak (min 6 chars).',
+    'auth/too-many-requests': 'Too many attempts. Please wait.',
+    'auth/network-request-failed': 'Network error. Check your internet.',
+    'auth/invalid-phone-number': 'Invalid phone number format.',
+    'auth/invalid-verification-code': 'Wrong OTP code.',
+    'auth/code-expired': 'OTP expired. Resend.',
+  };
+  return map[e.code] || e.message;
+}
+
+function showErr(id, msg) { const el = document.getElementById(id); if(el) el.textContent = msg; }
+function clearErr(id) { showErr(id, ''); }
+function setBtn(id, disabled, text) {
+  const el = document.getElementById(id);
+  if (el) { el.disabled = disabled; el.textContent = text; }
+}
+
+// ═══════════════════════════════════════════════════════
+//  ONBOARDING
+// ═══════════════════════════════════════════════════════
+function obNext(step) {
+  document.querySelectorAll('.ob-step').forEach(s => s.classList.remove('active'));
+  document.getElementById('obs-'+step).classList.add('active');
+}
+
+function pickGoal(el, goal) {
+  document.querySelectorAll('.gopt').forEach(o => o.classList.remove('sel'));
+  el.classList.add('sel'); userGoal = goal;
+}
+
+// Real step counting via DeviceMotion
+function requestMotion(btn) {
+  if (typeof DeviceMotionEvent === 'undefined') {
+    toast('📱 Motion sensor not available on this device'); return;
+  }
+  // iOS 13+ requires permission
+  if (typeof DeviceMotionEvent.requestPermission === 'function') {
+    DeviceMotionEvent.requestPermission()
+      .then(perm => {
+        if (perm === 'granted') { startMotion(btn); }
+        else toast('⚠️ Motion permission denied');
+      }).catch(() => startMotion(btn));
+  } else {
+    startMotion(btn);
+  }
+}
+
+function startMotion(btn) {
+  motionActive = true;
+  window.addEventListener('devicemotion', handleMotion);
+  document.getElementById('motion-badge').style.display = 'inline-block';
+  if (btn) btn.style.borderColor = 'rgba(0,255,178,.4)';
+  toast('✅ Step counting activated!');
+}
+
+function handleMotion(e) {
+  const acc = e.accelerationIncludingGravity;
+  if (!acc) return;
+  const mag = Math.sqrt(acc.x**2 + acc.y**2 + acc.z**2);
+  if (lastAcc !== null) {
+    const delta = Math.abs(mag - lastAcc);
+    if (delta > stepThreshold) { stepCount++; updateStepDisplay(); }
+  }
+  lastAcc = mag;
+}
+
+function updateStepDisplay() {
+  const el = document.getElementById('stb-count');
+  if (el) el.textContent = stepCount.toLocaleString();
+  const go = document.getElementById('go-steps');
+  if (go) go.textContent = stepCount.toLocaleString();
+  const ms = document.getElementById('m-steps');
+  if (ms) ms.textContent = stepCount.toLocaleString();
+  const ps = document.getElementById('p-steps');
+  if (ps) ps.style.width = Math.min(stepCount/100,100)+'%';
+}
+
+// HealthKit Web (iOS Safari only)
+function requestHealthKit(btn) {
+  // HealthKit data via iOS Safari bridge
+  if (window.webkit?.messageHandlers?.health) {
+    window.webkit.messageHandlers.health.postMessage({
+      action: 'requestAuthorization',
+      types: ['stepCount','activeEnergyBurned','distanceWalkingRunning']
+    });
+    document.getElementById('healthkit-badge').style.display = 'inline-block';
+    if(btn) btn.style.borderColor = 'rgba(0,255,178,.4)';
+    toast('🍎 HealthKit connected!');
+  } else {
+    // Not on iOS Safari — acknowledge and use motion instead
+    document.getElementById('healthkit-badge').style.display = 'inline-block';
+    if(btn) btn.style.borderColor = 'rgba(0,255,178,.4)';
+    toast('📱 Open in iPhone Safari for real HealthKit data. Using motion sensor now.');
+  }
+}
+
+// iOS HealthKit callback (called by iOS bridge if available)
+window.healthDataReceived = function(data) {
+  if (data.steps) {
+    stepCount = data.steps;
+    updateStepDisplay();
+  }
+};
+
+function finishOnboard() {
+  const h = document.getElementById('ob-h').value;
+  const w = document.getElementById('ob-w').value;
+  const age = document.getElementById('ob-age').value;
+  const gen = document.getElementById('ob-gen').value;
+  if (currentUser) {
+    localStorage.setItem('fv_ob_' + currentUser.uid, '1');
+    localStorage.setItem('fv_metrics_' + currentUser.uid, JSON.stringify({h,w,age,gen,goal:userGoal}));
+  }
+  launchApp(currentUser);
+}
+
+// ═══════════════════════════════════════════════════════
+//  LAUNCH APP
+// ═══════════════════════════════════════════════════════
+function launchApp(user) {
+  showScreen('app');
+  const name = user.displayName || user.email?.split('@')[0] || user.phoneNumber || 'Warrior';
+  const firstName = name.split(' ')[0];
+
+  // Nav
+  document.getElementById('nav-uname').textContent = firstName;
+  const navAv = document.getElementById('nav-av');
+  if (user.photoURL) navAv.innerHTML = `<img src="${user.photoURL}" alt=""/>`;
+  else navAv.textContent = firstName[0]?.toUpperCase() || '👤';
+
+  // Dashboard
+  document.getElementById('dash-name').textContent = firstName;
+  const h = new Date().getHours();
+  document.getElementById('dash-greet').textContent =
+    h<12?'Good morning ☀️':h<18?'Good afternoon 🌤':h<21?'Good evening 🌆':'Good night 🌙';
+
+  // Profile
+  document.getElementById('ph-name').textContent = name;
+  document.getElementById('ph-email').textContent = user.email || user.phoneNumber || '';
+  const phAv = document.getElementById('ph-av');
+  if (user.photoURL) phAv.innerHTML = `<img src="${user.photoURL}" alt=""/>`;
+  else phAv.textContent = firstName[0]?.toUpperCase() || '👤';
+
+  // Provider badge
+  const provBadge = document.getElementById('auth-provider-badge');
+  if (user.providerData?.[0]?.providerId === 'google.com') provBadge.textContent = '✓ GOOGLE';
+  else if (user.providerData?.[0]?.providerId === 'phone') provBadge.textContent = '✓ PHONE';
+  else provBadge.textContent = '✓ EMAIL';
+
+  // Load health data
+  loadHealthData();
+  animCount('cnt1', 12400);
+}
+
+// ═══════════════════════════════════════════════════════
+//  HEALTH DATA — Real device + simulation fallback
+// ═══════════════════════════════════════════════════════
+let hData = { steps:0, cal:0, dist:0, active:0, weekly:[] };
+
+function loadHealthData() {
+  // If motion tracking is active, use real step count
+  if (motionActive && stepCount > 0) {
+    hData.steps = stepCount;
+  } else {
+    // Time-based realistic simulation
+    const now = new Date();
+    const minOfDay = now.getHours()*60 + now.getMinutes();
+    const prog = minOfDay / 1440;
+    hData.steps = Math.floor(5000 + Math.sin(prog * Math.PI)*4500 + Math.random()*400);
+  }
+  hData.cal    = Math.floor(hData.steps * 0.048 * 10 + 750);
+  hData.dist   = parseFloat((hData.steps * 0.000762).toFixed(1));
+  hData.active = Math.floor(hData.steps / 190);
+  hData.weekly = Array.from({length:7}, (_,i) =>
+    i===6 ? hData.steps : Math.floor(5500 + Math.random()*5500));
+  renderMetrics();
+  document.getElementById('last-sync').textContent = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('stb-count').textContent = hData.steps.toLocaleString();
+  document.getElementById('go-steps').textContent = hData.steps.toLocaleString();
+  document.getElementById('stb-title').textContent = motionActive ? 'Device Motion Active ✅' : 'Apple Health Simulation';
+  document.getElementById('stb-sub').textContent = motionActive
+    ? 'Real steps from phone accelerometer · Last sync: ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})
+    : 'Open on iPhone for real HealthKit data · Last sync: ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+}
+
+function renderMetrics() {
+  const s = hData;
+  document.getElementById('m-steps').textContent = s.steps.toLocaleString();
+  document.getElementById('m-steps-s').textContent = `Goal: 10,000 · ${Math.min(Math.round(s.steps/100),100)}%`;
+  document.getElementById('m-cal').innerHTML = s.cal.toLocaleString() + '<span class="mc-unit"> kcal</span>';
+  document.getElementById('m-cal-s').textContent = `Goal: 2,000 kcal`;
+  document.getElementById('m-dist').innerHTML = s.dist + '<span class="mc-unit"> km</span>';
+  document.getElementById('m-dist-s').textContent = `Goal: 8 km`;
+  document.getElementById('m-active').innerHTML = s.active + '<span class="mc-unit"> min</span>';
+  document.getElementById('m-active-s').textContent = `Goal: 60 min`;
+  setTimeout(() => {
+    document.getElementById('p-steps').style.width = Math.min(s.steps/100,100)+'%';
+    document.getElementById('p-cal').style.width   = Math.min(s.cal/20,100)+'%';
+    document.getElementById('p-dist').style.width  = Math.min(s.dist/8*100,100)+'%';
+    document.getElementById('p-active').style.width= Math.min(s.active/60*100,100)+'%';
+  }, 300);
+  if (!chartInited) { chartInited=true; initChart(); }
+}
+
+function syncHealth() {
+  toast('🔄 Syncing health data…');
+  setTimeout(() => { loadHealthData(); toast('✅ Health data synced!'); }, 1000);
+}
+
+// Auto refresh every 5 min
+setInterval(() => { if (currentUser && document.getElementById('page-dashboard').classList.contains('active')) loadHealthData(); }, 300000);
+
+// ═══════════════════════════════════════════════════════
+//  THREE.JS GLOBE — Fixed (no read-only property errors)
+// ═══════════════════════════════════════════════════════
+function initThreeJS() {
+  const canvas = document.getElementById('dash-canvas');
+  if (!canvas || threeInited) return;
+  threeInited = true;
+
+  const W = canvas.clientWidth || 600, H = 250;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, W/H, 0.1, 1000);
+  camera.position.set(0, 0, 52);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setSize(W, H);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+
+  // Build particle geometry using fresh typed arrays
+  const N = 2800;
+  const pos = new Float32Array(N * 3);
+  const col = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    pos[i*3]   = (Math.random() - .5) * 170;
+    pos[i*3+1] = (Math.random() - .5) * 170;
+    pos[i*3+2] = (Math.random() - .5) * 170;
+    const r = Math.random();
+    if (r < .4)      { col[i*3]=0;   col[i*3+1]=1;   col[i*3+2]=.7; }
+    else if (r < .7) { col[i*3]=.48; col[i*3+1]=.38; col[i*3+2]=1;  }
+    else             { col[i*3]=1;   col[i*3+1]=.42; col[i*3+2]=.21;}
+  }
+  const pGeo = new THREE.BufferGeometry();
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  pGeo.setAttribute('color',    new THREE.BufferAttribute(col, 3));
+  const particles = new THREE.Points(pGeo, new THREE.PointsMaterial({
+    size: .45, vertexColors: true, transparent: true, opacity: .7
+  }));
+  scene.add(particles);
+
+  // Globe
+  const globe = new THREE.Mesh(
+    new THREE.SphereGeometry(12, 48, 48),
+    new THREE.MeshPhongMaterial({ color:0x0d2137, emissive:0x00ffb2, emissiveIntensity:.05, transparent:true, opacity:.8 })
+  );
+  scene.add(globe);
+
+  const wire = new THREE.Mesh(
+    new THREE.SphereGeometry(12.3, 20, 20),
+    new THREE.MeshBasicMaterial({ color:0x00FFB2, wireframe:true, transparent:true, opacity:.1 })
+  );
+  scene.add(wire);
+
+  // Rings using Group (so rotation doesn't hit read-only properties)
+  const ringGroup = new THREE.Group();
+  [[17,.4,0x00FFB2],[22,.3,0x7B61FF],[27,.22,0xFF6B35]].forEach(([r,o,c], i) => {
+    const m = new THREE.Mesh(
+      new THREE.TorusGeometry(r, .11, 8, 80),
+      new THREE.MeshBasicMaterial({ color:c, transparent:true, opacity:o })
+    );
+    m.rotation.x = Math.PI/3 + i*.18;
+    ringGroup.add(m);
+  });
+  scene.add(ringGroup);
+
+  // Lights
+  const dl = new THREE.DirectionalLight(0x00FFB2, 2);
+  dl.position.set(50, 50, 50);
+  scene.add(dl);
+  scene.add(new THREE.AmbientLight(0x7B61FF, .5));
+
+  let t = 0;
+  (function animate() {
+    requestAnimationFrame(animate);
+    t += .004;
+    particles.rotation.y = t * .07;
+    particles.rotation.x = t * .015;
+    globe.rotation.y = t * .2;
+    wire.rotation.y = -t * .09;
+    ringGroup.rotation.y = t * .13;
+    ringGroup.rotation.z = t * .07;
+    camera.position.x = Math.sin(t * .12) * 6;
+    camera.position.y = Math.cos(t * .09) * 3;
+    camera.lookAt(0, 0, 0);
+    renderer.render(scene, camera);
+  })();
+
+  window.addEventListener('resize', () => {
+    const w2 = canvas.clientWidth;
+    if (w2 > 0) {
+      camera.aspect = w2 / H;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w2, H);
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  CHART
+// ═══════════════════════════════════════════════════════
+function initChart() {
+  const ctx = document.getElementById('steps-chart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Today'],
+      datasets: [{
+        data: hData.weekly.length ? hData.weekly : [6200,8100,5400,9300,7800,11200,8421],
+        backgroundColor: (c) => c.dataIndex === 6 ? 'rgba(0,255,178,.85)' : 'rgba(0,255,178,.22)',
+        borderColor: 'transparent', borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:'#8892B0',font:{family:'Rajdhani'}} },
+        y: { grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:'#8892B0'}, beginAtZero:true }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  GEMINI AI — Fitness Specialist
+// ═══════════════════════════════════════════════════════
+const SYSTEM = `You are FITVERSE AI, an expert fitness coach and nutritionist. You ONLY answer questions related to:
+- Fitness, exercise, workouts, yoga, sports, stretching
+- Nutrition, diet, calories, Indian food, meal plans, macros
+- Health, wellness, weight management, BMI, body composition
+- Ayurveda, natural remedies related to fitness
+- Sleep, recovery, hydration for athletic performance
+
+You have deep expertise in Indian cuisine — dal, roti, biryani, dosa, idli, paratha, sabzi, rajma, chole, and hundreds more. Give specific calorie counts, macro breakdowns, and practical Indian meal plans.
+
+If asked something UNRELATED to fitness/health, say: "I'm FITVERSE AI — I specialize in fitness and nutrition only! Ask me about workouts, diet, or health 💪"
+
+Format plans clearly with sections. Be motivating and specific. Use emojis occasionally.`;
+
+// Use a supported text model; text-bison-001 is the stable text model for the Generative Language API.
+const GEMINI_MODEL = 'text-bison-001';
+
+function buildGeminiPrompt(msg) {
+  const historyText = chatHistory.map(h => {
+    const role = h.role === 'user' ? 'User' : 'Assistant';
+    const text = (h.parts?.[0]?.text || '').replace(/\n/g, ' ');
+    return `${role}: ${text}`;
+  }).join('\n');
+  return `${SYSTEM}\n\n${historyText}\nUser: ${msg}\nAssistant:`;
+}
+
+async function callGemini(msg) {
+  chatHistory.push({ role:'user', parts:[{text:msg}] });
+  const promptText = buildGeminiPrompt(msg);
+  // Send to local proxy endpoint (same origin) to avoid CORS restrictions.
+  const contents = [{ parts: [{ text: promptText }] }];
+  console.log('Gemini proxy request to:', '/api/gemini');
+  console.log('Request body:', JSON.stringify({ contents }, null, 2));
+  const res = await fetch('/api/gemini', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ contents })
+  });
+  console.log('Response status:', res.status, res.statusText);
+  if (!res.ok) {
+    const body = await res.text().catch(() => '<unable to read body>');
+    console.error('Response body:', body);
+    throw new Error(`HTTP ${res.status} ${res.statusText}: ${body}`);
+  }
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  const reply = data.candidates?.[0]?.output || data.output?.[0]?.content?.[0]?.text || 'Could not get a response. Please try again.';
+  chatHistory.push({ role:'model', parts:[{text:reply}] });
+  return reply;
+}
+
+function addMsg(text, role) {
+  const msgs = document.getElementById('chat-msgs');
+  const now = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  const d = document.createElement('div');
+  d.className = 'mw' + (role==='user' ? ' user' : '');
+  const formatted = text
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\n/g,'<br>');
+  d.innerHTML = `
+    <div class="m-av ${role==='user'?'uav':'aav'}">${role==='user'?'👤':'🤖'}</div>
+    <div>
+      <div class="m-bub ${role}">${formatted}</div>
+      <div class="m-time">${role==='user'?'You':'FITVERSE AI'} · ${now}</div>
+    </div>`;
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+  return d;
+}
+
+function showTyping() {
+  const msgs = document.getElementById('chat-msgs');
+  const d = document.createElement('div');
+  d.className='mw'; d.id='typing';
+  d.innerHTML='<div class="m-av aav">🤖</div><div><div class="m-bub ai"><div class="typing-row"><div class="td"></div><div class="td"></div><div class="td"></div></div></div></div>';
+  msgs.appendChild(d); msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function sendMsg() {
+  const inp = document.getElementById('chat-in');
+  const btn = document.getElementById('send-btn');
+  const msg = inp.value.trim();
+  if (!msg) return;
+  inp.value=''; inp.style.height='auto'; btn.disabled=true;
+  addMsg(msg,'user'); showTyping();
+  try {
+    const reply = await callGemini(msg);
+    document.getElementById('typing')?.remove();
+    addMsg(reply,'ai');
+  } catch(e) {
+    document.getElementById('typing')?.remove();
+    console.error('Full Gemini error details:', e);
+    console.error('Error name:', e.name);
+    console.error('Error message:', e.message);
+    console.error('Error stack:', e.stack);
+    addMsg('⚠️ Gemini API error: ' + e.message + '\n\nMake sure the API key is valid and you have internet connection.','ai');
+    console.error('Gemini:', e);
+  }
+  btn.disabled=false; inp.focus();
+}
+
+function quickSend(msg) {
+  document.getElementById('chat-in').value = msg;
+  sendMsg();
+}
+
+function clearChat() {
+  chatHistory=[];
+  const m=document.getElementById('chat-msgs'); m.innerHTML='';
+  addMsg('Chat cleared! 🧹 What fitness question can I help you with?','ai');
+  toast('💬 Chat cleared');
+}
+
+// ═══════════════════════════════════════════════════════
+//  NUTRITION
+// ═══════════════════════════════════════════════════════
+const FOODS = [
+  {n:'Poha',c:270,e:'🌾',p:'per plate',cat:'breakfast'},
+  {n:'Upma',c:200,e:'🫕',p:'per bowl',cat:'breakfast'},
+  {n:'Idli + Sambar',c:220,e:'🍽️',p:'4 pieces',cat:'breakfast'},
+  {n:'Masala Dosa',c:200,e:'🥞',p:'per piece',cat:'breakfast'},
+  {n:'Aloo Paratha',c:420,e:'🫓',p:'2 pieces',cat:'breakfast'},
+  {n:'Besan Cheela',c:180,e:'🥞',p:'2 pieces',cat:'breakfast'},
+  {n:'Pesarattu',c:160,e:'🥗',p:'2 pieces',cat:'breakfast'},
+  {n:'Dal Rice',c:380,e:'🍚',p:'per plate',cat:'lunch'},
+  {n:'Rajma Chawal',c:430,e:'🍲',p:'per plate',cat:'lunch'},
+  {n:'Chicken Biryani',c:520,e:'🍛',p:'per serving',cat:'lunch'},
+  {n:'Veg Biryani',c:380,e:'🍛',p:'per serving',cat:'lunch'},
+  {n:'Paneer Butter Masala',c:380,e:'🧀',p:'per bowl',cat:'lunch'},
+  {n:'Dal Makhani',c:280,e:'🥘',p:'per bowl',cat:'lunch'},
+  {n:'Chole Bhature',c:650,e:'🍞',p:'per serving',cat:'lunch'},
+  {n:'Pav Bhaji',c:480,e:'🥖',p:'per serving',cat:'lunch'},
+  {n:'Kadhai Paneer',c:340,e:'🧀',p:'per bowl',cat:'lunch'},
+  {n:'Butter Chicken',c:440,e:'🍗',p:'per bowl',cat:'lunch'},
+  {n:'Samosa',c:130,e:'🥟',p:'per piece',cat:'snacks'},
+  {n:'Dhokla',c:100,e:'🟡',p:'per piece',cat:'snacks'},
+  {n:'Vada Pav',c:290,e:'🍔',p:'per piece',cat:'snacks'},
+  {n:'Kachori',c:210,e:'🫓',p:'per piece',cat:'snacks'},
+  {n:'Bhel Puri',c:180,e:'🥣',p:'per plate',cat:'snacks'},
+  {n:'Gulab Jamun',c:150,e:'🟤',p:'per piece',cat:'sweets'},
+  {n:'Kheer',c:200,e:'🍮',p:'per bowl',cat:'sweets'},
+  {n:'Halwa',c:300,e:'🍮',p:'per bowl',cat:'sweets'},
+  {n:'Ladoo',c:180,e:'🟡',p:'per piece',cat:'sweets'},
+  {n:'Jalebi',c:150,e:'🟠',p:'per piece',cat:'sweets'},
+];
+let foodCat='all';
+
+function renderFoods(q='') {
+  const g = document.getElementById('foods-grid');
+  if (!g) return;
+  const data = FOODS.filter(f =>
+    (foodCat==='all' || f.cat===foodCat) &&
+    (!q || f.n.toLowerCase().includes(q.toLowerCase()))
+  );
+  g.innerHTML = data.map(f =>
+    `<div class="food-tile" onclick="logFood('${f.n}',${f.c})">
+      <div class="ft-em">${f.e}</div>
+      <div class="ft-name">${f.n}</div>
+      <div class="ft-cal">${f.c} kcal</div>
+      <div class="ft-per">${f.p}</div>
+    </div>`
+  ).join('');
+}
+
+function filterFoods(q) { renderFoods(q); }
+
+function catFilter(btn, cat) {
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active'); foodCat=cat; renderFoods();
+}
+
+function logFood(name, cal) { toast(`✅ ${name} logged — ${cal} kcal`); }
+
+async function aiFood() {
+  const q = document.getElementById('food-search').value.trim();
+  if (!q) { toast('🔍 Type a food name first'); return; }
+  toast('🧠 AI searching "' + q + '"…');
+  try {
+    const res = await fetch('/api/gemini', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: `Nutrition for Indian food "${q}". Respond ONLY with valid JSON, no markdown, no text: {"name":"dish","calories":number,"protein":number,"carbs":number,"fat":number,"emoji":"emoji","per":"serving size"}` }]
+        }]
+      }) }
+    );
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const raw = (data.candidates?.[0]?.output || data.output?.[0]?.content?.[0]?.text || '{}')
+      .replace(/```json?/g,'').replace(/```/g,'').trim();
+    const food = JSON.parse(raw);
+    if (food.name && food.calories) {
+      document.getElementById('foods-grid').innerHTML =
+        `<div class="food-tile" style="border-color:rgba(0,255,178,.4);position:relative" onclick="logFood('${food.name}',${food.calories})">
+          <div style="position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;color:var(--neon);letter-spacing:1px">⚡AI</div>
+          <div class="ft-em">${food.emoji||'🍽️'}</div>
+          <div class="ft-name">${food.name}</div>
+          <div class="ft-cal">${food.calories} kcal</div>
+          <div class="ft-per">${food.per||'per serving'}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:5px">P:${food.protein||'?'}g C:${food.carbs||'?'}g F:${food.fat||'?'}g</div>
+        </div>` +
+        FOODS.slice(0,8).map(f =>
+          `<div class="food-tile" onclick="logFood('${f.n}',${f.c})">
+            <div class="ft-em">${f.e}</div><div class="ft-name">${f.n}</div>
+            <div class="ft-cal">${f.c} kcal</div><div class="ft-per">${f.p}</div>
+          </div>`
+        ).join('');
+    }
+  } catch(e) { toast('⚠️ AI search failed. Showing local results.'); renderFoods(q); }
+}
+
+// ═══════════════════════════════════════════════════════
+//  WORKOUTS
+// ═══════════════════════════════════════════════════════
+const WORKOUTS = [
+  {n:'MORNING ENERGIZER',icon:'🌅',diff:'EASY',dc:'d-easy',t:'20 min',c:'180 kcal',tags:['Home','No Equipment'],cat:'home'},
+  {n:'HIIT BLAST',icon:'⚡',diff:'HARD',dc:'d-hard',t:'30 min',c:'450 kcal',tags:['HIIT','Cardio'],cat:'hiit'},
+  {n:'UPPER BODY POWER',icon:'💪',diff:'MEDIUM',dc:'d-med',t:'45 min',c:'320 kcal',tags:['Gym','Strength'],cat:'gym'},
+  {n:'SUN SALUTATION',icon:'🧘',diff:'EASY',dc:'d-easy',t:'25 min',c:'150 kcal',tags:['Yoga','Flexibility'],cat:'yoga'},
+  {n:'LEG DAY CRUSHER',icon:'🦵',diff:'HARD',dc:'d-hard',t:'50 min',c:'500 kcal',tags:['Gym','Legs'],cat:'gym'},
+  {n:'CORE SHRED',icon:'🎯',diff:'MEDIUM',dc:'d-med',t:'20 min',c:'200 kcal',tags:['Home','Core'],cat:'home'},
+  {n:'5K RUNNER PREP',icon:'🏃',diff:'MEDIUM',dc:'d-med',t:'35 min',c:'350 kcal',tags:['Cardio','Outdoors'],cat:'cardio'},
+  {n:'POWER YOGA FLOW',icon:'🌊',diff:'EASY',dc:'d-easy',t:'40 min',c:'220 kcal',tags:['Yoga','Balance'],cat:'yoga'},
+  {n:'TABATA INFERNO',icon:'🔥',diff:'HARD',dc:'d-hard',t:'25 min',c:'400 kcal',tags:['HIIT','Full Body'],cat:'hiit'},
+  {n:'PUSH PULL LEGS',icon:'🏆',diff:'HARD',dc:'d-hard',t:'60 min',c:'550 kcal',tags:['Gym','Full Body'],cat:'gym'},
+  {n:'STRETCHING FLOW',icon:'🤸',diff:'EASY',dc:'d-easy',t:'15 min',c:'80 kcal',tags:['Home','Recovery'],cat:'home'},
+  {n:'CYCLING SESSION',icon:'🚴',diff:'MEDIUM',dc:'d-med',t:'45 min',c:'420 kcal',tags:['Cardio','Endurance'],cat:'cardio'},
+];
+let wCat='all';
+
+function renderWorkouts() {
+  const g = document.getElementById('wkt-grid');
+  if (!g) return;
+  const data = WORKOUTS.filter(w => wCat==='all' || w.cat===wCat);
+  g.innerHTML = data.map(w =>
+    `<div class="wkt-card">
+      <div class="wkt-banner" style="background:linear-gradient(135deg,rgba(0,255,178,.07),rgba(123,97,255,.07))">
+        ${w.icon}<div class="wkt-diff ${w.dc}">${w.diff}</div>
+      </div>
+      <div class="wkt-body">
+        <div class="wkt-name">${w.n}</div>
+        <div class="wkt-meta"><span>⏱ ${w.t}</span><span>🔥 ${w.c}</span></div>
+        <div class="wkt-tags">${w.tags.map(t=>`<span class="wkt-tag">${t}</span>`).join('')}</div>
+        <button class="wkt-start" onclick="startWorkout('${w.n}')">▶ GET AI PLAN</button>
+      </div>
+    </div>`
+  ).join('');
+}
+
+function wFilter(btn, cat) {
+  document.querySelectorAll('.wf').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active'); wCat=cat; renderWorkouts();
+}
+
+function startWorkout(name) {
+  showPage('ai');
+  document.getElementById('chat-in').value =
+    `Create a detailed "${name}" workout: warm-up (5 min), main exercises with sets/reps/rest, cool-down, and tips. Be practical and motivating!`;
+  sendMsg();
+}
+
+// ═══════════════════════════════════════════════════════
+//  BMI
+// ═══════════════════════════════════════════════════════
+function calcBMI() {
+  const h = parseFloat(document.getElementById('bh').value)/100;
+  const w = parseFloat(document.getElementById('bw').value);
+  if (!h||!w||h<.5||w<10) { toast('⚠️ Enter valid height and weight'); return; }
+  const bmi = w/(h*h), r = Math.round(bmi*10)/10;
+  let cat,color,advice,pct;
+  if      (bmi<16)  { cat='Severely Underweight';color='#3b82f6';advice='BMI critically low. See a doctor. Eat calorie-dense foods: nuts, ghee, paneer, banana, full-fat milk, 5-6 meals daily.';pct=5; }
+  else if (bmi<18.5){ cat='Underweight 📉';color='#60a5fa';advice='Gain healthy weight. Eat protein-rich foods: dal, paneer, eggs, chicken, nuts. Add ghee to meals. Strength training builds muscle.';pct=16; }
+  else if (bmi<25)  { cat='Normal Weight ✅';color='#22c55e';advice='Excellent! Maintain with balanced Indian diet, 30 min daily exercise, yoga, and 7-8 hours of sleep. Keep it up!';pct=46; }
+  else if (bmi<30)  { cat='Overweight ⚠️';color:'#f59e0b';advice='Reduce refined carbs (maida, white rice). Replace with millets, oats, brown rice. Walk 10,000 steps daily. Cut sugar in chai.';pct=68; }
+  else if (bmi<35)  { cat='Obese Class I 🔴';color='#ef4444';advice='Consult a doctor. Start with 30-min daily walks. Cut fried food, sweets, white rice. Focus on dal, sabzi, salad, lean protein.';pct=85; }
+  else              { cat='Obese Class II 🔴';color='#dc2626';advice='Medical supervision strongly recommended. Water exercise or gentle yoga is safer. Work with a nutritionist for gradual changes.';pct=96; }
+  document.getElementById('bmi-num').textContent = r;
+  document.getElementById('bmi-cat').textContent = cat;
+  document.getElementById('bmi-cat').style.color = color;
+  document.getElementById('bmi-advice').textContent = advice;
+  setTimeout(() => document.getElementById('bmi-needle').style.left = Math.min(pct,96)+'%', 100);
+  document.getElementById('bmi-placeholder').style.display='none';
+  document.getElementById('bmi-inner').style.display='block';
+}
+
+function bmiAI() {
+  const h=document.getElementById('bh').value, w=document.getElementById('bw').value;
+  const age=document.getElementById('ba').value, gen=document.getElementById('bg').value;
+  const act=document.getElementById('bact').value, goal=document.getElementById('bgoal').value;
+  const bmi=document.getElementById('bmi-num').textContent;
+  showPage('ai');
+  document.getElementById('chat-in').value =
+    `My profile: BMI ${bmi}, height ${h}cm, weight ${w}kg, age ${age}, ${gen}, ${act}, goal: ${goal}. Give me: 1) My daily calorie target, 2) Full Indian meal plan for one day with exact calorie counts, 3) Weekly workout schedule, 4) Top 5 tips for my goal. Be specific!`;
+  sendMsg();
+}
+
+// ═══════════════════════════════════════════════════════
+//  NAV + PAGE ROUTING
+// ═══════════════════════════════════════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nl,.mb,.sb-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nl,.mb').forEach(b => {
+    if (b.textContent.trim().toLowerCase().startsWith(id.slice(0,4).toLowerCase()))
+      b.classList.add('active');
+  });
+  window.scrollTo(0,0);
+  if (id==='dashboard') {
+    setTimeout(() => {
+      initThreeJS();
+      if (!chartInited) renderMetrics();
+    }, 150);
+  }
+  if (id==='nutrition') renderFoods();
+  if (id==='workout')   renderWorkouts();
+  if (id==='home')      animCount('cnt1', 12400);
+}
+
+function toggleMob() { document.getElementById('mob-menu').classList.toggle('open'); }
+function closeMob()  { document.getElementById('mob-menu').classList.remove('open'); }
+
+// ═══════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+function animCount(id, target) {
+  const el = document.getElementById(id); if (!el) return;
+  let v=0; const step=Math.ceil(target/55);
+  const iv = setInterval(() => {
+    v = Math.min(v+step, target);
+    el.textContent = v.toLocaleString();
+    if (v>=target) clearInterval(iv);
+  }, 28);
+}
+
+// Handle Google redirect result on page load
+window.addEventListener('load', () => {
+  auth.getRedirectResult()
+    .then(result => { if (result.user) currentUser = result.user; })
+    .catch(e => console.log('Redirect result:', e.message));
+});
+</script>
+</body>
+</html>
