@@ -1,5 +1,6 @@
 {
   "rewrites": [
-    { "source": "/((?!api).*)" , "destination": "/FITVERSE_AI_v3.html" }
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/FITVERSE_AI_v3.html" }
   ]
 }
